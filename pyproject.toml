@@ -1,0 +1,105 @@
+[project]
+name = "MochaFlow"
+version = "0.1.0"
+description = "Write markdown report easily! Optionally transform into a PDF, streamlit page, or dash page!"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "ESPR3SS0", email = "98864173+ESPR3SS0@users.noreply.github.com" }]
+
+# Core runtime deps (match pixi’s pypi-dependencies/dependencies where appropriate)
+dependencies = [
+  "markdown-it-py>=4.0.0,<5",
+  "reportlab>=4.4.4,<5",
+]
+
+# Optional extras to align with pixi toolchain and examples
+[project.optional-dependencies]
+cli = ["cyclopts>=2.7,<3"]
+streamlit = ["streamlit>=1.50.0,<2"]
+dash = ["dash>=3.2.0,<4"]
+docs = ["mkdocs"]
+plots = ["matplotlib"]
+dev = ["pytest>=8.4.2,<9", "ruff>=0.6.0,<0.7"]
+weasy = ["weasyprint>=66.0,<67"]
+
+[project.urls]
+Homepage = "https://github.com/ESPR3SS0/MochaFlow"
+Repository = "https://github.com/ESPR3SS0/MochaFlow"
+
+[project.scripts]
+mochaflow = "mochaflow.cli:main"
+
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = [
+  "mochaflow/**/*",
+  "README.md",
+]
+packages = ["mochaflow"]
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+
+
+[tool.pixi.pypi-dependencies]
+weasyprint = ">=66.0,<67"
+markdown-it-py = ">=4.0.0,<5"
+pytest = ">=8.4.2,<9"
+ruff = ">=0.6.0,<0.7"
+MochaFlow = { path = "." }
+cyclopts = ">=2.7,<3"
+
+
+[tool.pixi.dependencies]
+reportlab = ">=4.4.4,<5"
+streamlit = ">=1.50.0,<2"
+dash = ">=3.2.0,<4"
+mkdocs = ">=1.6.1,<2"
+matplotlib = ">=3.10.7,<4"
+hatch = ">=1.14.1,<2"
+
+
+
+
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src", "tests"]
+include = ["pyproject.toml", "src/**/*.py", "tests/**/*.py", "scripts/**/*.py", "pynto/**/*.py"]
+
+[tool.ruff.lint]
+# Defaults: E/F (pycodestyle/pyflakes), I (isort), UP (pyupgrade),
+# B (bugbear), SIM (simplify), C4 (comprehensions), Q (quotes), PL (pylint-lite), RUF (extra rules), D (docstrings)
+select = ["E", "F", "I", "UP", "B", "SIM", "C4", "Q", "PL", "RUF", "D"]
+ignore = ["E501", "C901", "PLR0915", "PLR0912", "PLR0913", "PLR0917"]  # let the formatter manage line length
+fixable = ["ALL"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["PLR2004", "D"]  # magic numbers in tests are fine
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.pixi.tasks]
+lint = "ruff check ."
+format = "ruff format ."
+test-quick = "pytest -q -m \"not pdf and not cli\""
+test-all = "pytest -q -m \"cli or pdf or not pdf and not cli\""
+cmd = "pytest -q"
+build = "python -m build"
+publish-test = "twine upload --repository testpypi dist/*"
+publish = "twine upload dist/*"
+hatch-build = "hatch build"
+hatch-publish-test = "hatch publish -r test"
+hatch-publish = "hatch publish"
