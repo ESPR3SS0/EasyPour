@@ -1,0 +1,44 @@
+site_name: MochaFlow
+site_description: Markdown reports from Python objects to HTML and PDF
+site_author: MochaFlow contributors
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: orange
+      accent: blue
+    - scheme: slate
+      primary: orange
+      accent: blue
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - content.code.copy
+    - content.tabs.link
+  language: en
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - CLI: cli.md
+  - Library API: library.md
+  - Customization: customization.md
+  - Rendering: rendering.md
+  - Examples: examples.md
+  - Troubleshooting: troubleshooting.md
+  - Contributing: contributing.md
+
+markdown_extensions:
+  - tables
+  - toc:
+      permalink: true
+  - admonition
+  - def_list
+  - attr_list
+  - pymdownx.highlight
+  - pymdownx.superfences
