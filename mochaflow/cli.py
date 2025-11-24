@@ -4,12 +4,12 @@ Falls back to a tiny internal parser if Cyclopts is unavailable, so tests and
 basic usage still work without extra installs.
 """
 
-# file: mdreport/cli.py
+# file: mochaflow/cli.py
 import importlib.util
 import pathlib
 import sys
 from typing import Optional
-from .render import markdown_to_pdf, markdown_to_html
+from .render import markdown_to_html
 
 def _load_builder(py_path: pathlib.Path):
     spec = importlib.util.spec_from_file_location("report_builder", str(py_path))
@@ -26,14 +26,17 @@ def _run(
     md: Optional[pathlib.Path],
     pdf: Optional[pathlib.Path],
     html: Optional[pathlib.Path],
-    css: Optional[pathlib.Path],
     from_md: Optional[pathlib.Path],
 ) -> int:
     if from_md and builder:
         print("Use either --builder or --from-md, not both.", file=sys.stderr)
         return 2
 
+    report_obj = None
     if from_md:
+        if pdf:
+            print("--from-md cannot produce PDFs; provide a builder that returns Report.", file=sys.stderr)
+            return 2
         md_text = from_md.read_text(encoding="utf-8")
     else:
         if not builder:
@@ -42,6 +45,7 @@ def _run(
         obj = _load_builder(builder)
         if hasattr(obj, "to_markdown"):
             md_text = obj.to_markdown()
+            report_obj = obj if hasattr(obj, "write_pdf") else None
         elif isinstance(obj, str):
             md_text = obj
         else:
@@ -53,7 +57,10 @@ def _run(
     if html:
         html.write_text(markdown_to_html(md_text), encoding="utf-8")
     if pdf:
-        markdown_to_pdf(md_text, str(pdf), base_url=".", css_path=str(css) if css else None)
+        if not report_obj:
+            print("PDF output requires build_report() to return mochaflow.Report.", file=sys.stderr)
+            return 2
+        report_obj.write_pdf(str(pdf))
     return 0
 
 
@@ -62,7 +69,7 @@ def _fallback_parse(argv: list[str]) -> dict[str, Optional[str]]:
 
     Avoids argparse; keeps CLI usable without Cyclopts installed.
     """
-    flags = {"builder", "from-md", "md", "html", "pdf", "css"}
+    flags = {"builder", "from-md", "md", "html", "pdf"}
     out: dict[str, Optional[str]] = {k.replace("-", "_"): None for k in flags}
     it = iter(argv)
     for tok in it:
@@ -83,7 +90,7 @@ def main():
     try:
         from cyclopts import App  # type: ignore
 
-        app = App(name="mdreport", help="Build Markdown/HTML/PDF reports.")
+        app = App(name="mochaflow", help="Build Markdown/HTML/PDF reports.")
 
         @app.default
         def build(
@@ -91,10 +98,9 @@ def main():
             md: Optional[pathlib.Path] = None,
             pdf: Optional[pathlib.Path] = None,
             html: Optional[pathlib.Path] = None,
-            css: Optional[pathlib.Path] = None,
             from_md: Optional[pathlib.Path] = None,
         ) -> None:
-            code = _run(builder, md, pdf, html, css, from_md)
+            code = _run(builder, md, pdf, html, from_md)
             if code:
                 sys.exit(code)
 
@@ -110,7 +116,6 @@ def main():
             md=pathlib.Path(args["md"]) if args.get("md") else None,
             pdf=pathlib.Path(args["pdf"]) if args.get("pdf") else None,
             html=pathlib.Path(args["html"]) if args.get("html") else None,
-            css=pathlib.Path(args["css"]) if args.get("css") else None,
             from_md=pathlib.Path(args["from_md"]) if args.get("from_md") else None,
         )
         if code:

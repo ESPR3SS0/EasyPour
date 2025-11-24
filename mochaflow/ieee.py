@@ -1,72 +1,95 @@
-# file: mdreport/ieee.py
-from __future__ import annotations
-from dataclasses import dataclass, field, replace
-from typing import Dict, Any, List, Optional, Tuple
-import copy
-import re
-from .core import Report, Section, Table as CoreTable, Image as CoreImage
-from typing import Any as _Any
-from pathlib import Path
-from .render import DashboardMixin
+"""IEEE-flavored PDF template helpers."""
 
-FN_REF_RE = re.compile(r"\[\^(?P<key>[^\]]+)\]")
-BLOCK_MATH_RE = re.compile(r"^\s*\$\$(?P<fm>.+?)\$\$\s*$", re.DOTALL)
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Optional
+
+from reportlab.lib import colors
+
+from .render import PDFTemplate
+
 
 @dataclass
-class IEEEOptions:
-    """High-level knobs for IEEE-like output."""
-    two_column: bool = True
-    show_lof: bool = False
-    show_lot: bool = False
+class IEEETemplate(PDFTemplate):
+    """Preset tuned for IEEE-style two-column papers.
+
+    - First page defaults to a single column for title/abstract.
+    - Subsequent pages use two columns with Times fonts and tighter spacing.
+    - Running headers/page numbers are enabled by default.
+    """
+
+    layout: str = "two"
     running_header_left: str = "PREPRINT"
     running_header_right: str = "MochaFlow"
-    references_title: str = "References"
-    # mapping: citation key -> rendered reference string (IEEE-ish)
-    bibliography: Dict[str, str] = field(default_factory=dict)
-    footnotes: Dict[str, str] = field(default_factory=dict)
-    math_dir: str = ".manymark_math"
+    include_header: bool = True
+    include_page_numbers: bool = True
+    first_page_single_column: bool = True
 
-@dataclass
-class IEEETemplate(PDFTemplate, DashboardMixin):  # Inherits both PDF and dashboard capabilities
-    """A thin preset over PDFTemplate aiming for IEEE-ish defaults."""
-    page_size: Tuple[float, float] = (612.0, 792.0)  # US Letter in points
-    margin_left: float = 54.0
-    margin_right: float = 54.0
-    margin_top: float = 60.0
-    margin_bottom: float = 72.0
-    layout: str = "two"  # default to two columns
-    font: str = "Helvetica"
-    font_bold: str = "Helvetica-Bold"
-    base_font_size: float = 9.5
-    h1: float = 18.0
-    h2: float = 11.0
-    h3: float = 10.0
-    def __post_init__(self):
-        lh = self.margin_top - 24
-        fh = self.margin_bottom - 36
+    def __post_init__(self) -> None:
+        # Layout defaults
+        self.layout = self.layout or "two"
+        if self.first_page_single_column:
+            self.first_page_layout = "single"
+        if not self.column_gap:
+            self.column_gap = 18.0
 
-        def header(page: _Any, frame: _Any, page_num: int):
-            w = page.get_page_info().get_width()
-            Paragraph(
-                self.meta.get("running_header_left", "PREPRINT"),  # set via template.meta
-                font=self.font, font_size=self.base_font_size - 1, text_color=X11Color("gray"),
-                horizontal_alignment=Alignment.LEFT,
-            ).paint(page, (self.margin_left, lh))  # Direct position calculation
-            Paragraph(
-                self.meta.get("running_header_right", "MochaFlow"),
-                font=self.font, font_size=self.base_font_size - 1, text_color=X11Color("gray"),
-                horizontal_alignment=Alignment.RIGHT,
-            ).paint(page, (w - self.margin_right - 200, lh))  # Direct position calculation
+        # Typography defaults
+        self.font = "Times-Roman"
+        self.font_bold = "Times-Bold"
+        self.mono_font = "Courier"
+        self.base_font_size = 9.5
+        self.h1 = 20.0
+        self.h2 = 12.0
+        self.h3 = 10.0
+        self.section_spacing = 0.4
+        self.figure_prefix = "Fig."
+        self.table_prefix = "TABLE"
+        self.figure_caption_style.setdefault("font", self.font)
+        self.figure_caption_style.setdefault("font_size", self.base_font_size - 1)
+        self.table_caption_style.setdefault("font", self.font_bold)
+        self.table_caption_style.setdefault("font_size", self.base_font_size - 1)
 
-        def footer(page: _Any, frame: _Any, page_num: int):
-            w = page.get_page_info().get_width()
-            Paragraph(
-                str(page_num),
-                font=self.font, font_size=self.base_font_size - 1, text_color=X11Color("gray"),
-                horizontal_alignment=Alignment.CENTERED,
-            ).paint(page, (w / 2 - 10, fh))  # Direct position calculation
+        # Heading tweaks (center title, uppercase section labels)
+        self.heading_overrides.setdefault(1, {"alignment": "center"})
+        self.heading_overrides.setdefault(2, {"spacing_before": 6, "spacing_after": 4})
+        self.heading_overrides.setdefault(3, {"spacing_before": 4, "spacing_after": 2})
+
+        # Paragraph tweaks (slightly denser body text)
+        self.paragraph_overrides.setdefault("space_after", 3)
+
+        def header(canv, template: PDFTemplate, page_num: int) -> None:
+            if not self.include_header or page_num == 1:
+                return
+            canv.saveState()
+            canv.setFont(self.font_bold, max(self.base_font_size - 1, 8))
+            canv.setFillColor(colors.grey)
+            width, _ = template._page_size_tuple()
+            canv.drawString(
+                template.margin_left,
+                template.page_size[1] - template.margin_top + 12,
+                self.running_header_left,
+            )
+            right_text = self.running_header_right
+            canv.drawRightString(
+                width - template.margin_right,
+                template.page_size[1] - template.margin_top + 12,
+                right_text,
+            )
+            canv.restoreState()
+
+        def footer(canv, template: PDFTemplate, page_num: int) -> None:
+            if not self.include_page_numbers:
+                return
+            canv.saveState()
+            canv.setFont(self.font, max(self.base_font_size - 1, 8))
+            canv.setFillColor(colors.grey)
+            width, _ = template._page_size_tuple()
+            canv.drawCentredString(width / 2, template.margin_bottom / 2, str(page_num))
+            canv.restoreState()
 
         self.header_fn = header
         self.footer_fn = footer
-        if not hasattr(self, "meta"):
-            self.meta = {}  # type: ignore[attr-defined]
+
+
+__all__ = ["IEEETemplate"]

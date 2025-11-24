@@ -1,4 +1,4 @@
-# file: mdreport/core.py
+# file: mochaflow/core.py
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -91,7 +91,7 @@ def _slug(s: str) -> str:
 # Simple asset manager for relocating images for HTML/PDF renders
 @dataclass
 class AssetManager:
-    base: Path = Path(".mdreport_assets")
+    base: Path = Path(".mochaflow_assets")
 
     def __post_init__(self) -> None:
         self.base.mkdir(parents=True, exist_ok=True)
@@ -160,25 +160,6 @@ class Image:
 
 
 @dataclass
-class DFInteractivePlot:
-    """Descriptor for an interactive DataFrame plot in Streamlit.
-
-    Renders a scatter of df[x] vs df[y] and overlays a line y = m x where `m`
-    is controlled by a Streamlit slider.
-    """
-
-    data: Any
-    x: str
-    y: str
-    title: Optional[str] = None
-    slider_label: str = "Slope (m)"
-    m_min: float = -2.0
-    m_max: float = 2.0
-    m_step: float = 0.1
-    m_default: float = 1.0
-
-
-@dataclass
 class PageBreak:
     def to_markdown(self) -> str:
         # Works in HTML print/PDF (Pandoc/Prince) and is harmless elsewhere
@@ -207,7 +188,9 @@ Block = Union[
     str,
     Table,
     Image,
-    DFInteractivePlot,
+    "InteractiveFigure",
+    "FigureBlock",
+    "TableBlock",
     "Section",
     PageBreak,
     DataFrameBlock,
@@ -218,6 +201,28 @@ Block = Union[
     VerticalSpaceDirective,
     DoubleSpaceDirective,
 ]
+
+
+@dataclass
+class FigureBlock:
+    image: Image
+    caption: Optional[str] = None
+    label: Optional[str] = None
+    numbered: bool = True
+
+
+@dataclass
+class TableBlock:
+    table: Table
+    caption: Optional[str] = None
+    label: Optional[str] = None
+    numbered: bool = False
+
+
+@dataclass
+class InteractiveFigure:
+    figure: FigureBlock
+    plotly_figure: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -234,12 +239,28 @@ class Section:
             self.blocks.append(p)
         return self
 
-    def add_table(self, table: Table) -> "Section":
-        self.blocks.append(table)
+    def add_table(
+        self,
+        table: Table,
+        *,
+        caption: Optional[str] = None,
+        label: Optional[str] = None,
+        numbered: bool = False,
+    ) -> "Section":
+        if caption or label or numbered:
+            self.blocks.append(
+                TableBlock(table=table, caption=caption, label=label, numbered=numbered)
+            )
+        else:
+            self.blocks.append(table)
         return self
 
-    def add_image(self, image: Image) -> "Section":
-        self.blocks.append(image)
+    def add_image(self, image: Image, *, label: Optional[str] = None, numbered: bool = False) -> "Section":
+        if label or numbered:
+            block = FigureBlock(image=image, caption=image.caption, label=label, numbered=numbered)
+            self.blocks.append(block)
+        else:
+            self.blocks.append(image)
         return self
 
     def add_image_path(
@@ -249,9 +270,29 @@ class Section:
         alt: str = "",
         caption: Optional[str] = None,
         width: Optional[Union[int, str]] = None,
+        label: Optional[str] = None,
+        numbered: bool = False,
     ) -> "Section":
         """Convenience to add an image by filesystem path."""
-        return self.add_image(Image(path=str(path), alt=alt, caption=caption, width=width))
+        return self.add_image(
+            Image(path=str(path), alt=alt, caption=caption, width=width),
+            label=label,
+            numbered=numbered,
+        )
+
+    def add_figure(
+        self,
+        path: str | Path,
+        *,
+        caption: Optional[str] = None,
+        label: Optional[str] = None,
+        width: Optional[Union[int, str]] = None,
+        alt: str = "",
+    ) -> "Section":
+        """Add a figure with automatic numbering support."""
+        img = Image(path=str(path), alt=alt, caption=caption, width=width)
+        self.blocks.append(FigureBlock(image=img, caption=caption, label=label, numbered=True))
+        return self
 
     def add_section(self, title: str) -> "Section":
         child = Section(title=title, level=min(self.level + 1, 6))
@@ -297,6 +338,31 @@ class Section:
         self.blocks.append(strikethrough(text))
         return self
 
+    def add_math(
+        self,
+        formula: str,
+        *,
+        out_dir: str | Path = ".mochaflow_math",
+        dpi: int = 220,
+        caption: Optional[str] = None,
+        width: Optional[Union[int, str]] = None,
+        alt: Optional[str] = None,
+    ) -> "Section":
+        """Render a TeX-like formula to PNG (matplotlib mathtext) and insert as an image."""
+        try:
+            from .mathstub import tex_to_png as _tex_to_png  # local import to avoid hard matplotlib dep
+        except Exception as exc:  # pragma: no cover - import-time failure
+            raise ImportError("Matplotlib is required for add_math(); pip install matplotlib.") from exc
+        out_path = _tex_to_png(formula, Path(out_dir), dpi=dpi)
+        return self.add_image(
+            Image(
+                path=str(out_path),
+                alt=alt or formula,
+                caption=caption,
+                width=width,
+            )
+        )
+
     def add_matplotlib(
         self,
         obj: Any,
@@ -307,12 +373,15 @@ class Section:
         caption: Optional[str] = None,
         width: Optional[Union[int, str]] = None,
         dpi: int = 180,
+        interactive: bool = False,
+        label: Optional[str] = None,
+        numbered: bool = True,
     ) -> "Section":
         """Accept a matplotlib Figure or Axes, save as PNG, and add as an Image block.
 
         Parameters
         - obj: matplotlib.figure.Figure or matplotlib.axes.Axes
-        - out_dir: directory to save the PNG (defaults to .manymark_figs)
+        - out_dir: directory to save the PNG (defaults to .mochaflow_figs)
         - filename: optional PNG filename (defaults to mpl_{index}.png)
         - alt/caption/width: forwarded to Image()
         - dpi: DPI used when saving
@@ -325,11 +394,20 @@ class Section:
         else:
             raise TypeError("add_matplotlib expects a matplotlib Figure or Axes")
 
-        base = Path(out_dir) if out_dir is not None else Path(".manymark_figs")
+        base = Path(out_dir) if out_dir is not None else Path(".mochaflow_figs")
         base.mkdir(parents=True, exist_ok=True)
         fname = filename or f"mpl_{len(self.blocks)}.png"
         out_path = base / fname
         fig.savefig(str(out_path), dpi=dpi, bbox_inches="tight")
+        plotly_payload: Optional[Dict[str, Any]] = None
+        if interactive:
+            try:
+                import plotly.io as pio  # type: ignore
+
+                plotly_fig = pio.from_matplotlib(fig)
+                plotly_payload = plotly_fig.to_dict()
+            except Exception:
+                plotly_payload = None
         # NEW: proactively close figure to avoid memory bloat in long sessions
         try:
             import matplotlib.pyplot as _plt  # type: ignore
@@ -337,39 +415,15 @@ class Section:
             _plt.close(fig)
         except Exception:
             pass
-        return self.add_image_path(out_path, alt=alt, caption=caption, width=width)
-
-    def add_df_plot_slider(
-        self,
-        data: Any,
-        x: str,
-        y: str,
-        *,
-        title: Optional[str] = None,
-        slider_label: str = "Slope (m)",
-        m_min: float = -2.0,
-        m_max: float = 2.0,
-        m_step: float = 0.1,
-        m_default: float = 1.0,
-    ) -> "Section":
-        """Add an interactive DataFrame plot (Streamlit only).
-
-        Displays df[x] vs df[y] and a line y = m x with `m` controlled by a slider.
-        Only renders interactively in Streamlit; Markdown/HTML/PDF will show a placeholder note.
-        """
-        self.blocks.append(
-            DFInteractivePlot(
-                data=data,
-                x=x,
-                y=y,
-                title=title,
-                slider_label=slider_label,
-                m_min=m_min,
-                m_max=m_max,
-                m_step=m_step,
-                m_default=m_default,
-            )
-        )
+        image = Image(path=str(out_path), alt=alt, caption=caption, width=width)
+        if interactive:
+            fig_block = FigureBlock(image=image, caption=caption, label=label, numbered=numbered)
+            self.blocks.append(InteractiveFigure(figure=fig_block, plotly_figure=plotly_payload))
+            return self
+        if caption or label or numbered:
+            self.blocks.append(FigureBlock(image=image, caption=caption, label=label, numbered=numbered))
+        else:
+            self.blocks.append(image)
         return self
 
     # ----- PDF mixins / advanced layout -----
@@ -475,13 +529,27 @@ class Section:
                 lines += [blk.to_markdown(), ""]
             elif isinstance(blk, Image):
                 lines += [blk.to_markdown(), ""]
-            elif isinstance(blk, DFInteractivePlot):
-                note = blk.title or "Interactive Plot"
-                lines += [f"> {note} (Streamlit-only interactive widget)", ""]
+            elif isinstance(blk, InteractiveFigure):
+                lines += [blk.figure.image.to_markdown(), ""]
+                caption = blk.figure.caption or blk.figure.image.caption
+                label_text = getattr(blk.figure, "_mf_label_text", "Figure")
+                if caption:
+                    lines += [f"**{label_text}:** {caption}", ""]
+            elif isinstance(blk, FigureBlock):
+                lines += [blk.image.to_markdown(), ""]
+                label_text = getattr(blk, "_mf_label_text", "Figure")
+                caption = blk.caption or blk.image.caption
+                if caption:
+                    lines += [f"**{label_text}:** {caption}", ""]
             elif isinstance(blk, PageBreak):
                 lines += [blk.to_markdown(), ""]
             elif isinstance(blk, DataFrameBlock):
                 lines += [blk.to_markdown(), ""]
+            elif isinstance(blk, TableBlock):
+                lines += [blk.table.to_markdown(), ""]
+                label_text = getattr(blk, "_mf_label_text", "Table")
+                if blk.caption:
+                    lines += [f"*{label_text}:* {blk.caption}", ""]
             elif isinstance(blk, Section):
                 # ensure nested section levels don't exceed h6
                 blk.level = min(self.level + 1, 6)
@@ -519,8 +587,12 @@ class Report:
     # Dash options
     dash_options: Dict[str, Any] = field(default_factory=dict)
     dash_css_text: Optional[str] = field(default=None)
+    references: Dict[str, str] = field(default_factory=dict)
 
     _st: Any | None = field(default=None, repr=False, compare=False)
+    _citation_index: Dict[str, int] = field(default_factory=dict, init=False, repr=False)
+    _citation_order: List[str] = field(default_factory=list, init=False, repr=False)
+    _label_index: Dict[str, str] = field(default_factory=dict, init=False, repr=False)
 
     # ---------- PDF ----------
     def write_pdf(self, path: str, template: "PDFTemplate|None" = None) -> str:  # type: ignore[name-defined]
@@ -528,6 +600,7 @@ class Report:
         Render this Report to a PDF using ReportLab.
         """
 
+        self._ensure_label_index()
         from .render import report_to_pdf  # local import to avoid circular dependency
 
         return report_to_pdf(self, out_pdf_path=path, template=template)
@@ -572,6 +645,7 @@ class Report:
         return toc
 
     def to_markdown(self, *, asset_base: Optional[Path] = None) -> str:
+        self._ensure_label_index()
         dt = self.date_str or date.today().isoformat()
         front_matter = [
             "---",
@@ -619,6 +693,7 @@ class Report:
         return md
 
     def write_markdown(self, path: str | Path) -> str:
+        self._ensure_label_index()
         md = self.to_markdown()
         p = Path(path)
         with open(p, "w", encoding="utf-8") as f:
@@ -654,7 +729,7 @@ class Report:
         - page_title: str
         - layout: "centered" | "wide"
         - height: int (HTML preview height)
-        - tabs: list[str] (any of ["Markdown", "HTML", "PDF"], order respected)
+        - tabs: list[str] (any of ["Report", "Markdown", "HTML", "PDF"], order respected)
         """
         self.streamlit_options.update(options)
         return self
@@ -737,7 +812,7 @@ class Report:
 
         - external_stylesheets: list of CSS URLs (e.g., Bootstrap)
         - css_text: raw CSS string injected via ``<style>`` in the layout
-        - tabs: ordered list of tabs to show (subset of ["Report", "Markdown", "HTML"])
+        - tabs: ordered list of tabs to show (subset of ["Report", "Markdown", "HTML", "PDF"])
         - preview_height: height used for Markdown/HTML preview panes (e.g., "70vh")
         - page_title: browser tab title override
         """
@@ -752,6 +827,90 @@ class Report:
         if page_title is not None:
             self.dash_options["page_title"] = page_title
         return self
+
+    # ---------- references / citations ----------
+    def add_reference(self, key: str, entry: str) -> "Report":
+        """Register a reference entry (e.g., bibliography string)."""
+        self.references[key] = entry
+        return self
+
+    def cite(self, key: str) -> str:
+        """Return an IEEE-style numeric citation like [1], tracking order of first use."""
+        if key not in self.references:
+            raise KeyError(f"Reference '{key}' is not registered.")
+        if key not in self._citation_index:
+            self._citation_order.append(key)
+            self._citation_index[key] = len(self._citation_order)
+        return f"[{self._citation_index[key]}]"
+
+    def ensure_references_section(self, title: str = "References") -> Section:
+        """Populate (or create) a references section ordered by citation usage."""
+        self._ensure_label_index()
+        sec = self.find_section(title) or self.add_section(title)
+        sec.blocks = []
+        for idx, key in enumerate(self._citation_order, start=1):
+            entry = self.references.get(key)
+            if entry:
+                sec.add_text(f"[{idx}] {entry}")
+        return sec
+
+    # ---------- figure/table labels ----------
+    def _ensure_label_index(self) -> Dict[str, str]:
+        fig_prefix = self.meta.get("figure_prefix", "Figure")
+        table_prefix = self.meta.get("table_prefix", "Table")
+        figure_counter = 0
+        table_counter = 0
+        label_index: Dict[str, str] = {}
+
+        def assign_figure(block: FigureBlock) -> None:
+            nonlocal figure_counter
+            needs_number = block.numbered or bool(block.label)
+            if needs_number:
+                figure_counter += 1
+                label_text = f"{fig_prefix} {figure_counter}"
+            else:
+                label_text = fig_prefix
+            setattr(block, "_mf_label_text", label_text)
+            if block.label:
+                label_index[block.label] = label_text
+
+        def assign_table(block: TableBlock) -> None:
+            nonlocal table_counter
+            needs_number = block.numbered or bool(block.label)
+            if needs_number:
+                table_counter += 1
+                label_text = f"{table_prefix} {table_counter}"
+            else:
+                label_text = table_prefix
+            setattr(block, "_mf_label_text", label_text)
+            if block.label:
+                label_index[block.label] = label_text
+
+        def walk(sec: Section) -> None:
+            for blk in sec.blocks:
+                if isinstance(blk, InteractiveFigure):
+                    assign_figure(blk.figure)
+                elif isinstance(blk, FigureBlock):
+                    assign_figure(blk)
+                elif isinstance(blk, TableBlock):
+                    assign_table(blk)
+                elif isinstance(blk, Section):
+                    walk(blk)
+
+        for section in self.sections:
+            walk(section)
+
+        self._label_index = label_index
+        return label_index
+
+    def ref(self, label: str, *, default: Optional[str] = None) -> str:
+        """Reference a labeled figure/table: returns text like ``Figure 2``."""
+        index = self._ensure_label_index()
+        if label in index:
+            return index[label]
+        if default is not None:
+            return default
+        raise KeyError(f"Label '{label}' not found in this report.")
 
     @property
     def st(self):  # pragma: no cover - depends on streamlit runtime
@@ -768,10 +927,11 @@ class Report:
 
     # ---------- interactive previews ----------
     def show_streamlit(self, *, height: int = 420) -> None:
+        self._ensure_label_index()
         """Render this report inside a Streamlit app with sane defaults.
 
-        Shows tabs for Markdown, HTML preview, and a PDF download button (when
-        ReportLab is available). Intended usage:
+        Shows tabs for a native Report view, raw Markdown, HTML preview, and a PDF
+        download button (when ReportLab is available). Intended usage:
 
             # my_app.py
             from mochaflow import Report
@@ -791,14 +951,14 @@ class Report:
         # Build artifacts once
         md = self.to_markdown()
         try:
-            from .render import markdown_to_html, markdown_to_pdf
+            from .render import markdown_to_html
         except Exception as e:  # pragma: no cover
             raise RuntimeError("Render helpers unavailable.") from e
 
         # Options (with reasonable defaults)
         page_title = self.streamlit_options.get("page_title", f"MochaFlow — {self.title}")
         layout = self.streamlit_options.get("layout", "wide")
-        tabs = self.streamlit_options.get("tabs", ["Markdown", "HTML", "PDF"])
+        tabs = self.streamlit_options.get("tabs", ["Report", "Markdown", "HTML", "PDF"])
         height = int(self.streamlit_options.get("height", height))
 
         # Best effort page config (ignore if too late in script execution)
@@ -872,6 +1032,31 @@ class Report:
             h = hashlib.md5("||".join(parts).encode()).hexdigest()[:10]
             return f"k_{h}"
 
+        def _display_image_block(img: Image):
+            use_container = None
+            w_px: Optional[int] = None
+            if img.width is not None:
+                if isinstance(img.width, str):
+                    w = img.width.strip()
+                    if w.endswith("%"):
+                        use_container = True
+                    elif w.endswith("px"):
+                        try:
+                            w_px = int(w[:-2])
+                        except Exception:
+                            w_px = None
+                elif isinstance(img.width, int):
+                    w_px = img.width
+            try:
+                st.image(
+                    img.path,
+                    caption=img.caption,
+                    width=w_px,
+                    use_container_width=use_container,
+                )  # type: ignore[call-arg]
+            except TypeError:
+                st.image(img.path, caption=img.caption, width=w_px, use_column_width=use_container)
+
         def _render_section(sec: Section):
             # Map heading level to Streamlit headers
             if sec.level <= 2:
@@ -894,30 +1079,7 @@ class Report:
                 if isinstance(blk, str):
                     st.markdown(blk, unsafe_allow_html=True)
                 elif isinstance(blk, Image):
-                    use_container = None
-                    w_px: Optional[int] = None
-                    if blk.width is not None:
-                        if isinstance(blk.width, str):
-                            w = blk.width.strip()
-                            if w.endswith("%"):
-                                use_container = True
-                            elif w.endswith("px"):
-                                try:
-                                    w_px = int(w[:-2])
-                                except Exception:
-                                    w_px = None
-                        elif isinstance(blk.width, int):
-                            w_px = blk.width
-                    # Prefer new Streamlit API; fall back for older versions
-                    try:
-                        st.image(
-                            blk.path,
-                            caption=blk.caption,
-                            width=w_px,
-                            use_container_width=use_container,
-                        )  # type: ignore[call-arg]
-                    except TypeError:
-                        st.image(blk.path, caption=blk.caption, width=w_px, use_column_width=use_container)
+                    _display_image_block(blk)
                 elif isinstance(blk, Table):
                     try:
                         import pandas as pd  # type: ignore
@@ -926,60 +1088,20 @@ class Report:
                         st.table(df)
                     except Exception:
                         st.table([dict(zip(blk.headers, r)) for r in blk.rows])
-                elif isinstance(blk, DFInteractivePlot):
-                    try:
-                        import pandas as pd  # type: ignore
-                    except Exception:
-                        st.info("Install pandas to view the interactive DataFrame plot.")
-                        continue
-                    # Normalize to DataFrame
-                    df = blk.data
-                    if not hasattr(df, "columns"):
+                elif isinstance(blk, InteractiveFigure):
+                    displayed = False
+                    if blk.plotly_figure:
                         try:
-                            df = pd.DataFrame(df)
-                        except Exception:
-                            st.warning("Could not convert data to DataFrame.")
-                            continue
-                    if blk.title:
-                        st.markdown(f"**{blk.title}**")
-                    key_base = _stable_key(sec.title, blk.x, blk.y, blk.title or "")
-                    m = st.slider(
-                        blk.slider_label,
-                        min_value=float(blk.m_min),
-                        max_value=float(blk.m_max),
-                        value=float(blk.m_default),
-                        step=float(blk.m_step),
-                        key=f"{key_base}_slider",
-                    )
-                    try:
-                        import matplotlib.pyplot as plt  # type: ignore
+                            import plotly.graph_objects as go  # type: ignore
 
-                        fig, ax = plt.subplots(figsize=(4.5, 3.0))
-                        ax.scatter(df[blk.x], df[blk.y], label=f"{blk.y} vs {blk.x}", alpha=0.85)
-                        try:
-                            x_min = float(df[blk.x].min())
-                            x_max = float(df[blk.x].max())
+                            st.plotly_chart(go.Figure(blk.plotly_figure), use_container_width=True)
+                            displayed = True
                         except Exception:
-                            x_min, x_max = 0.0, 1.0
-                        xs = [x_min, x_max]
-                        ys = [m * xs[0], m * xs[1]]
-                        ax.plot(xs, ys, color="#d62728", label=f"y = {m:.2f} x")
-                        ax.set_xlabel(blk.x)
-                        ax.set_ylabel(blk.y)
-                        ax.legend()
-                        fig.tight_layout()
-                        st.pyplot(fig)
-                    except Exception:
-                        # Fallback to a simple line chart overlay using Streamlit
-                        try:
-                            plot_df = pd.DataFrame({
-                                blk.x: df[blk.x],
-                                blk.y: df[blk.y],
-                                "mx": df[blk.x].astype(float) * float(m),
-                            })
-                            st.line_chart(plot_df.set_index(blk.x)[[blk.y, "mx"]])
-                        except Exception:
-                            st.warning("Unable to render interactive plot.")
+                            displayed = False
+                    if not displayed:
+                        _display_image_block(blk.figure.image)
+                    if blk.figure.caption:
+                        st.caption(blk.figure.caption)
                 elif isinstance(blk, DataFrameBlock):
                     try:
                         import pandas as pd  # type: ignore
@@ -1000,10 +1122,14 @@ class Report:
                     except Exception:
                         st.warning(f"Could not render custom block: {type(blk).__name__}")
 
-        if "Markdown" in tab_lookup:
-            with tab_lookup["Markdown"]:
+        if "Report" in tab_lookup:
+            with tab_lookup["Report"]:
                 for s in self.sections:
                     _render_section(s)
+
+        if "Markdown" in tab_lookup:
+            with tab_lookup["Markdown"]:
+                st.code(md, language="markdown")
 
         if "HTML" in tab_lookup:
             with tab_lookup["HTML"]:
@@ -1035,8 +1161,8 @@ class Report:
 
                 try:
                     with tempfile.NamedTemporaryFile(suffix=".pdf") as tmp:
-                        markdown_to_pdf(md, tmp.name, base_url=".")
-                        data = open(tmp.name, "rb").read()
+                        self.write_pdf(tmp.name)
+                        data = Path(tmp.name).read_bytes()
                     st.download_button(
                         "Download PDF",
                         data=data,
@@ -1054,6 +1180,7 @@ class Report:
                 st.warning("after_render hook failed.")
 
     def to_dash_app(self):  # pragma: no cover - optional dependency helper
+        self._ensure_label_index()
         """Create a Dash app that mirrors this report with interactive widgets.
 
         Returns a ready-to-run ``dash.Dash`` instance. Usage::
@@ -1063,7 +1190,7 @@ class Report:
         """
 
         try:
-            from dash import Dash, Input, Output, dcc, html, no_update  # type: ignore
+            from dash import Dash, Input, Output, dcc, html  # type: ignore
 
             try:
                 from dash import dash_table  # type: ignore
@@ -1081,9 +1208,9 @@ class Report:
         app.title = self.dash_options.get("page_title", f"MochaFlow — {self.title}")
 
         preview_height = self.dash_options.get("preview_height", "70vh")
-        tabs = self.dash_options.get("tabs", ["Report", "Markdown", "HTML"])
-        plot_specs: List[tuple[DFInteractivePlot, str, str]] = []
-
+        tabs = self.dash_options.get("tabs", ["Report", "Markdown", "HTML", "PDF"])
+        pdf_button_id: Optional[str] = None
+        pdf_download_id: Optional[str] = None
         def _stable_id(*parts: str) -> str:
             h = hashlib.md5("||".join(parts).encode()).hexdigest()[:10]
             return f"mf_{h}"
@@ -1115,74 +1242,19 @@ class Report:
             body_rows = [html.Tr([html.Td(str(cell)) for cell in row]) for row in rows]
             return html.Table([html.Thead(html.Tr(header_cells)), html.Tbody(body_rows)], className="mf-table")
 
-        def _coerce_xy(block: DFInteractivePlot) -> tuple[List[float], List[float]]:
-            xs_raw: List[Any] = []
-            ys_raw: List[Any] = []
-            try:
-                import pandas as pd  # type: ignore
-
-                df = block.data if hasattr(block.data, "columns") else pd.DataFrame(block.data)
-                xs_raw = df[block.x].tolist()
-                ys_raw = df[block.y].tolist()
-            except Exception:
-                data = block.data
-                if isinstance(data, dict) and block.x in data and block.y in data:
-                    xs_raw = list(data[block.x])
-                    ys_raw = list(data[block.y])
-                elif isinstance(data, list) and data:
-                    if isinstance(data[0], dict):
-                        xs_raw = [row.get(block.x) for row in data]
-                        ys_raw = [row.get(block.y) for row in data]
-            pairs: List[tuple[float, float]] = []
-            for xv, yv in zip(xs_raw, ys_raw):
-                try:
-                    if xv is None or yv is None:
-                        continue
-                    pairs.append((float(xv), float(yv)))
-                except Exception:
-                    continue
-            if not pairs:
-                return [], []
-            xs, ys = zip(*pairs)
-            return list(xs), list(ys)
-
-        def _build_df_plot(block: DFInteractivePlot, slope: float):
-            try:
-                import plotly.graph_objects as go  # type: ignore
-            except Exception:
-                return None
-
-            xs, ys = _coerce_xy(block)
-            if not xs or not ys:
-                return None
-            x_min, x_max = min(xs), max(xs)
-            fig = go.Figure()
-            fig.add_trace(
-                go.Scatter(
-                    x=xs,
-                    y=ys,
-                    mode="markers",
-                    marker={"size": 8, "color": "#1f77b4", "opacity": 0.85},
-                    name=f"{block.y} vs {block.x}",
-                )
-            )
-            fig.add_trace(
-                go.Scatter(
-                    x=[x_min, x_max],
-                    y=[slope * x_min, slope * x_max],
-                    mode="lines",
-                    line={"color": "#d62728"},
-                    name=f"y = {slope:.2f} x",
-                )
-            )
-            fig.update_layout(
-                title=block.title or "Interactive Plot",
-                xaxis_title=block.x,
-                yaxis_title=block.y,
-                margin={"l": 40, "r": 20, "t": 50, "b": 40},
-                template="plotly_white",
-            )
-            return fig
+        def _image_component(img: Image, caption: Optional[str] = None):
+            width = None
+            if isinstance(img.width, int):
+                width = f"{img.width}px"
+            elif isinstance(img.width, str):
+                width = img.width
+            fig_children = [
+                html.Img(src=_image_src(img.path), style={"maxWidth": width or "100%"}),
+            ]
+            cap = caption or img.caption
+            if cap:
+                fig_children.append(html.Figcaption(cap))
+            return html.Figure(fig_children, className="mf-image")
 
         def _render_section(sec: Section) -> html.Div:
             heading_map = {
@@ -1206,49 +1278,19 @@ class Report:
                 tbl = _table_component(blk.headers, blk.rows)
                 elems.append(html.Div(tbl, className="mf-table-wrap"))
             elif isinstance(blk, Image):
-                width = None
-                if isinstance(blk.width, int):
-                    width = f"{blk.width}px"
-                elif isinstance(blk.width, str):
-                    width = blk.width
-                fig_children = [
-                    html.Img(src=_image_src(blk.path), style={"maxWidth": width or "100%"}),
-                ]
-                if blk.caption:
-                    fig_children.append(html.Figcaption(blk.caption))
-                elems.append(html.Figure(fig_children, className="mf-image"))
-            elif isinstance(blk, DFInteractivePlot):
-                fig = _build_df_plot(blk, blk.m_default)
-                if fig is None:
+                elems.append(_image_component(blk))
+            elif isinstance(blk, InteractiveFigure):
+                if blk.plotly_figure:
                     elems.append(
                         html.Div(
-                            dcc.Markdown(
-                                f"> Install pandas+plotly to enable the interactive plot for **{blk.title or 'plot'}**.",
-                                className="mf-warning",
-                            )
-                        )
-                    )
-                else:
-                    slider_id = _stable_id(sec.title, str(index), "slider")
-                    graph_id = _stable_id(sec.title, str(index), "graph")
-                    plot_specs.append((blk, slider_id, graph_id))
-                    elems.append(
-                        html.Div(
-                            [
-                                html.Label(blk.slider_label),
-                                dcc.Slider(
-                                    id=slider_id,
-                                    min=float(blk.m_min),
-                                    max=float(blk.m_max),
-                                    step=float(blk.m_step),
-                                    value=float(blk.m_default),
-                                    tooltip={"always_visible": False, "placement": "bottom"},
-                                ),
-                                dcc.Graph(id=graph_id, figure=fig, config={"responsive": True}),
-                            ],
+                            dcc.Graph(figure=blk.plotly_figure, config={"responsive": True}),
                             className="mf-interactive-plot",
                         )
                     )
+                    if blk.figure.caption:
+                        elems.append(html.Figcaption(blk.figure.caption, className="mf-figcaption"))
+                else:
+                    elems.append(_image_component(blk.figure.image, blk.figure.caption))
             elif isinstance(blk, PageBreak):
                 elems.append(html.Hr(className="mf-page-break"))
             elif isinstance(blk, DataFrameBlock):
@@ -1310,6 +1352,20 @@ class Report:
                         ],
                     )
                 )
+            elif name == "PDF":
+                pdf_button_id = _stable_id("pdf", "button")
+                pdf_download_id = _stable_id("pdf", "download")
+                tab_components.append(
+                    dcc.Tab(
+                        label="PDF",
+                        value=value,
+                        children=[
+                            html.P("Generate a PDF on demand. ReportLab must be installed."),
+                            html.Button("Download PDF", id=pdf_button_id, n_clicks=0),
+                            dcc.Download(id=pdf_download_id),
+                        ],
+                    )
+                )
         layout_body: List[Any] = []
         if self.dash_css_text:
             layout_body.append(html.Style(self.dash_css_text))
@@ -1323,10 +1379,29 @@ class Report:
 
         app.layout = html.Div(layout_body, style={"padding": "1rem 2rem"})
 
-        for blk, slider_id, graph_id in plot_specs:
-            @app.callback(Output(graph_id, "figure"), Input(slider_id, "value"))
-            def _update_plot(value, block=blk):  # type: ignore[misc]
-                fig = _build_df_plot(block, float(value))
-                return fig if fig is not None else no_update
+        if pdf_button_id and pdf_download_id:
+            @app.callback(
+                Output(pdf_download_id, "data"),
+                Input(pdf_button_id, "n_clicks"),
+                prevent_initial_call=True,
+            )
+            def _download_pdf(n_clicks):  # type: ignore[misc]
+                if not n_clicks:
+                    from dash.exceptions import PreventUpdate  # type: ignore
+
+                    raise PreventUpdate
+                import tempfile
+                from pathlib import Path as _Path
+
+                with tempfile.NamedTemporaryFile(suffix=".pdf") as tmp:
+                    self.write_pdf(tmp.name)
+                    data = _Path(tmp.name).read_bytes()
+
+                from dash.dcc import send_bytes  # type: ignore
+
+                def _write_bytes(buffer):
+                    buffer.write(data)
+
+                return send_bytes(_write_bytes, "report.pdf")
 
         return app

@@ -1,11 +1,16 @@
+from __future__ import annotations
+
+from pathlib import Path
+
 """Public API exports for MochaFlow.
 
 Supports both legacy short helper names (b/i/u/link) and the newer explicit
 names (bold/italic/underline/url) depending on what the core module provides.
 """
 
-# file: mdreport/__init__.py
-from .render import markdown_to_html, markdown_to_pdf
+# file: mochaflow/__init__.py
+from .render import markdown_to_html
+from .ieee import IEEETemplate
 
 # Core types are stable
 from .core import Report, Section, Table, Image, code  # type: ignore
@@ -35,13 +40,23 @@ __all__ = [
     "Image",
     "code",
     "markdown_to_html",
-    "markdown_to_pdf",
+    "IEEETemplate",
 ]
 
 # Add whichever helper names are available
 for name in ("bold", "italic", "underline", "url", "b", "i", "u", "link"):
     if globals().get(name) is not None:
         __all__.append(name)
+
+
+def tex_to_png(formula: str, out_dir: Path | str, dpi: int = 220) -> Path:
+    """Lazily expose the math renderer without importing matplotlib until needed."""
+    from .mathstub import tex_to_png as _tex_to_png
+
+    return _tex_to_png(formula, Path(out_dir), dpi=dpi)
+
+
+__all__.append("tex_to_png")
 
 # Backfill newer Section helpers if the core version doesn't provide them
 def _attach_section_helpers():

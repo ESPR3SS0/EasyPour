@@ -1,9 +1,7 @@
 import pathlib
 import pytest
 
-from mochaflow.core import Report, Section, Image
-from mochaflow import markdown_to_pdf
-import pytest
+from mochaflow.core import Report, Section
 
 # Skip this module if matplotlib is not available
 try:
@@ -36,12 +34,12 @@ def test_add_matplotlib_image_markdown(tmp_path):
 
 
 @pytest.mark.pdf
-def test_add_matplotlib_image_weasy_pdf(tmp_path, ensure_pdf_capability):
+def test_add_matplotlib_image_pdf(tmp_path, ensure_pdf_capability):
     fig = _make_mpl_plot()
     rpt = Report("R")
     rpt.add_section("S").add_matplotlib(fig, out_dir=tmp_path, filename="plot.png", alt="p")
     out_pdf = tmp_path / "r.pdf"
-    markdown_to_pdf(rpt.to_markdown(), str(out_pdf), base_url=str(tmp_path))
+    rpt.write_pdf(str(out_pdf))
     data = out_pdf.read_bytes()
     assert data[:4] == b"%PDF"
     assert len(data) > 200

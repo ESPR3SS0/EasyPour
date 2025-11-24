@@ -2,16 +2,20 @@ import pathlib
 
 import pytest
 
-from mochaflow import Report, Table, markdown_to_pdf
+from mochaflow import Report, Table
 from mochaflow.render import PDFTemplate
 
 pytestmark = pytest.mark.pdf
 
 
-def test_markdown_to_pdf_roundtrip(tmp_path, ensure_pdf_capability):
-    md = "# Title\n\nA para with **bold** and a table.\n\n|A|B|\n|---|---|\n|1|2|\n"
+def test_report_write_pdf_default(tmp_path, ensure_pdf_capability):
+    rpt = Report("Default PDF Test")
+    rpt.add_section("Intro").add_text("A para with **bold** and a table.")
+    rpt.add_section("Data").add_table(
+        Table(headers=["A", "B"], rows=[["1", "2"], ["3", "4"]])
+    )
     out_pdf = tmp_path / "x.pdf"
-    path = markdown_to_pdf(md, str(out_pdf), base_url=".")
+    path = rpt.write_pdf(str(out_pdf))
     pdf_path = pathlib.Path(path)
     assert pdf_path.exists()
     data = pdf_path.read_bytes()

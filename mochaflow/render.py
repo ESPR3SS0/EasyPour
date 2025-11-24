@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-import re
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
@@ -11,10 +10,13 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 from reportlab.platypus import (
+    BaseDocTemplate,
     Flowable,
+    Frame,
     KeepInFrame,
     Image as RLImage,
     PageBreak as RLPageBreak,
+    PageTemplate,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -23,12 +25,14 @@ from reportlab.platypus import (
 )
 
 from .core import (
-    DFInteractivePlot,
     DataFrameBlock,
+    FigureBlock,
     Image as CoreImage,
+    InteractiveFigure,
     PageBreak as CorePageBreak,
     Report,
     Section,
+    TableBlock,
     Table as CoreTable,
 )
 from .inline import parse_inline
@@ -45,7 +49,6 @@ __all__ = [
     "PDFTemplate",
     "report_to_pdf",
     "markdown_to_html",
-    "markdown_to_pdf",
 ]
 
 
@@ -58,6 +61,13 @@ Alignment = {
 
 
 @dataclass
+class _NumberingState:
+    figure: int = 0
+    table: int = 0
+    equation: int = 0
+
+
+@dataclass
 class PDFTemplate:
     page_size: Sequence[float] = letter
     margin_left: float = 54
@@ -65,6 +75,16 @@ class PDFTemplate:
     margin_top: float = 64
     margin_bottom: float = 64
     layout: str = "single"
+    first_page_layout: Optional[str] = None
+    column_gap: float = 18.0
+    heading_overrides: Dict[int, Dict[str, Any]] = field(default_factory=dict)
+    paragraph_overrides: Dict[str, Any] = field(default_factory=dict)
+    figure_caption_style: Dict[str, Any] = field(default_factory=dict)
+    table_caption_style: Dict[str, Any] = field(default_factory=dict)
+    figure_prefix: str = "Figure"
+    table_prefix: str = "Table"
+    section_spacing: float = 0.35
+    custom_layouts: Dict[str, Callable[["PDFTemplate"], List[Frame]]] = field(default_factory=dict)
 
     font: str = "Helvetica"
     font_bold: str = "Helvetica-Bold"
@@ -83,8 +103,95 @@ class PDFTemplate:
     header_fn: Optional[Callable[[canvas.Canvas, "PDFTemplate", int], None]] = None
     footer_fn: Optional[Callable[[canvas.Canvas, "PDFTemplate", int], None]] = None
 
-    def make_document(self, output: str) -> SimpleDocTemplate:
-        doc = SimpleDocTemplate(
+    def _page_size_tuple(self) -> Tuple[float, float]:
+        width, height = self.page_size
+        return float(width), float(height)
+
+    def register_layout(
+        self,
+        name: str,
+        builder: Callable[["PDFTemplate"], List[Frame]],
+    ) -> "PDFTemplate":
+        self.custom_layouts[name.lower()] = builder
+        return self
+
+    def _single_frames(self) -> List[Frame]:
+        width, height = self._page_size_tuple()
+        usable_width = width - self.margin_left - self.margin_right
+        usable_height = height - self.margin_top - self.margin_bottom
+        return [
+            Frame(
+                self.margin_left,
+                self.margin_bottom,
+                usable_width,
+                usable_height,
+                leftPadding=0,
+                rightPadding=0,
+                topPadding=0,
+                bottomPadding=0,
+            )
+        ]
+
+    def _two_column_frames(self) -> List[Frame]:
+        width, height = self._page_size_tuple()
+        usable_width = width - self.margin_left - self.margin_right
+        usable_height = height - self.margin_top - self.margin_bottom
+        col_width = max(48.0, (usable_width - self.column_gap) / 2.0)
+        return [
+            Frame(
+                self.margin_left,
+                self.margin_bottom,
+                col_width,
+                usable_height,
+                leftPadding=0,
+                rightPadding=self.column_gap / 2.0,
+                topPadding=0,
+                bottomPadding=0,
+            ),
+            Frame(
+                self.margin_left + col_width + self.column_gap,
+                self.margin_bottom,
+                col_width,
+                usable_height,
+                leftPadding=self.column_gap / 2.0,
+                rightPadding=0,
+                topPadding=0,
+                bottomPadding=0,
+            ),
+        ]
+
+    def _frames_for_layout(self, layout_name: str) -> Optional[List[Frame]]:
+        name = layout_name.lower()
+        if name == "single":
+            return None
+        if name == "two":
+            return self._two_column_frames()
+        builder = self.custom_layouts.get(name)
+        if builder:
+            return builder(self)
+        return None
+
+    def make_document(
+        self,
+        output: str,
+        on_page: Optional[Callable[[canvas.Canvas, Any], None]] = None,
+    ) -> BaseDocTemplate | SimpleDocTemplate:
+        layout_name = (self.layout or "single").lower()
+        main_frames = self._frames_for_layout(layout_name)
+        first_layout = (self.first_page_layout or layout_name).lower()
+        first_frames = self._frames_for_layout(first_layout)
+
+        if main_frames is None and first_frames is None:
+            return SimpleDocTemplate(
+                output,
+                pagesize=self.page_size,
+                leftMargin=self.margin_left,
+                rightMargin=self.margin_right,
+                topMargin=self.margin_top,
+                bottomMargin=self.margin_bottom,
+            )
+
+        doc = BaseDocTemplate(
             output,
             pagesize=self.page_size,
             leftMargin=self.margin_left,
@@ -92,6 +199,19 @@ class PDFTemplate:
             topMargin=self.margin_top,
             bottomMargin=self.margin_bottom,
         )
+
+        def _cb(canv: canvas.Canvas, doc_obj: Any) -> None:
+            if on_page:
+                on_page(canv, doc_obj)
+
+        templates: List[PageTemplate] = []
+        if first_frames:
+            templates.append(PageTemplate(id="First", frames=first_frames, onPage=_cb, pages=[1]))
+        if main_frames:
+            templates.append(PageTemplate(id="Main", frames=main_frames, onPage=_cb))
+        elif not first_frames:
+            templates.append(PageTemplate(id="Main", frames=self._single_frames(), onPage=_cb))
+        doc.addPageTemplates(templates)
         return doc
 
 
@@ -123,22 +243,24 @@ def _paragraph_style(
     base_font: Optional[str] = None,
     font_size: Optional[float] = None,
 ) -> ParagraphStyle:
-    overrides = overrides or {}
-    font_name = overrides.get("font") or overrides.get("font_name") or base_font or template.font
-    size = overrides.get("font_size") or font_size or template.base_font_size
-    leading = overrides.get("leading") or (size * template.line_spacing)
-    alignment_name = str(overrides.get("alignment", "left")).lower()
+    merged: Dict[str, Any] = dict(template.paragraph_overrides)
+    if overrides:
+        merged.update(overrides)
+    font_name = merged.get("font") or merged.get("font_name") or base_font or template.font
+    size = merged.get("font_size") or font_size or template.base_font_size
+    leading = merged.get("leading") or (size * template.line_spacing)
+    alignment_name = str(merged.get("alignment", "left")).lower()
     alignment = Alignment.get(alignment_name, TA_LEFT)
-    color_value = overrides.get("color") or overrides.get("text_color") or template.text_color
+    color_value = merged.get("color") or merged.get("text_color") or template.text_color
     style = ParagraphStyle(
-        name=f"style_{id(overrides)}",
+        name=f"style_{id(merged)}",
         fontName=font_name,
         fontSize=size,
         leading=leading,
         textColor=_color(color_value),
         alignment=alignment,
-        spaceBefore=overrides.get("space_before", 0),
-        spaceAfter=overrides.get("space_after", 0),
+        spaceBefore=merged.get("space_before", 0),
+        spaceAfter=merged.get("space_after", 0),
     )
     return style
 
@@ -183,9 +305,12 @@ def _paragraph(text: str, template: PDFTemplate, overrides: Optional[Dict[str, A
 def _heading(text: str, level: int, template: PDFTemplate, overrides: Optional[Dict[str, Any]] = None) -> Paragraph:
     sizes = {1: template.h1, 2: template.h2, 3: template.h3}
     font_size = sizes.get(level, max(template.base_font_size, template.base_font_size + 2 - (level - 3)))
+    merged = dict(template.heading_overrides.get(level, {}))
+    if overrides:
+        merged.update(overrides)
     style = _paragraph_style(
         template,
-        overrides=overrides,
+        overrides=merged,
         base_font=template.font_bold,
         font_size=font_size,
     )
@@ -214,7 +339,7 @@ def _table(block: CoreTable, template: PDFTemplate) -> RLTable:
     return table
 
 
-def _image(block: CoreImage, template: PDFTemplate) -> List[Any]:
+def _image(block: CoreImage, template: PDFTemplate, *, include_caption: bool = True) -> List[Any]:
     flowables: List[Any] = []
     path = block.path
     width = block.pdf_style.get("width") if block.pdf_style else None
@@ -223,7 +348,7 @@ def _image(block: CoreImage, template: PDFTemplate) -> List[Any]:
         width = block.width
     img = RLImage(path, width=width, height=height)
     flowables.append(img)
-    if block.caption:
+    if include_caption and block.caption:
         flowables.append(Spacer(1, template.base_font_size * 0.2))
         cap_style = block.pdf_style.get("caption_style") if block.pdf_style else {"font_size": template.base_font_size - 1, "color": colors.grey}
         flowables.append(_paragraph(block.caption, template, overrides=cap_style))
@@ -279,13 +404,88 @@ def _floating_image(block: FloatingImageDirective, template: PDFTemplate) -> Lis
     return flows
 
 
-def _two_column_flowables(block: TwoColumnDirective, template: PDFTemplate) -> List[Any]:
+def _figure_flowables(
+    block: FigureBlock,
+    template: PDFTemplate,
+    numbering: _NumberingState,
+    labels: Dict[str, str],
+) -> List[Any]:
+    flows: List[Any] = []
+    flows.extend(_image(block.image, template, include_caption=False))
+    caption = block.caption or block.image.caption
+    label_text: Optional[str] = None
+    if block.numbered:
+        numbering.figure += 1
+        label_text = f"{template.figure_prefix} {numbering.figure}"
+        if block.label:
+            labels[block.label] = label_text
+    elif block.label:
+        labels[block.label] = block.label
+    if caption or label_text:
+        text = " ".join(filter(None, [f"{label_text}." if label_text else None, caption]))
+        flows.append(Spacer(1, template.base_font_size * 0.2))
+        flows.append(
+            _paragraph(
+                text.strip(),
+                template,
+                overrides={
+                    "alignment": "center",
+                    "font": template.font,
+                    "font_size": template.base_font_size - 1,
+                    **template.figure_caption_style,
+                },
+            )
+        )
+    return flows
+
+
+def _table_with_caption(
+    block: TableBlock,
+    template: PDFTemplate,
+    numbering: _NumberingState,
+    labels: Dict[str, str],
+) -> List[Any]:
+    flows: List[Any] = [_table(block.table, template)]
+    caption_parts: List[str] = []
+    if block.numbered:
+        numbering.table += 1
+        label = f"{template.table_prefix} {numbering.table}"
+        caption_parts.append(f"{label}.")
+        if block.label:
+            labels[block.label] = label
+    elif block.label:
+        labels[block.label] = block.label
+    if block.caption:
+        caption_parts.append(block.caption)
+    if caption_parts:
+        flows.append(Spacer(1, template.base_font_size * 0.2))
+        flows.append(
+            _paragraph(
+                " ".join(caption_parts).strip(),
+                template,
+                overrides={
+                    "alignment": "center",
+                    "font": template.font_bold,
+                    "font_size": template.base_font_size - 1,
+                    **template.table_caption_style,
+                },
+            )
+        )
+    return flows
+
+
+def _two_column_flowables(
+    block: TwoColumnDirective,
+    template: PDFTemplate,
+    numbering: _NumberingState,
+    labels: Dict[str, str],
+) -> List[Any]:
     left = []
     right = []
     for item in block.left:
-        left.extend(_block_flowables(item, template))
+        left.extend(_block_flowables(item, template, numbering, labels))
     for item in block.right:
-        right.extend(_block_flowables(item, template))
+        right.extend(_block_flowables(item, template, numbering, labels))
     usable = template.page_size[0] - template.margin_left - template.margin_right
     gap = block.gap
     col_width = max(10.0, (usable - gap) / 2)
@@ -332,7 +532,12 @@ def _render_dataframe(block: DataFrameBlock, template: PDFTemplate) -> List[Any]
         return [_paragraph(block.caption or "(DataFrame unavailable)", template)]
 
 
-def _block_flowables(block: Any, template: PDFTemplate) -> List[Any]:
+def _block_flowables(
+    block: Any,
+    template: PDFTemplate,
+    numbering: _NumberingState,
+    labels: Dict[str, str],
+) -> List[Any]:
     flows: List[Any] = []
     if isinstance(block, str):
         flows.append(_paragraph(block, template))
@@ -340,15 +545,18 @@ def _block_flowables(block: Any, template: PDFTemplate) -> List[Any]:
         flows.append(_table(block, template))
     elif isinstance(block, CoreImage):
         flows.extend(_image(block, template))
-    elif isinstance(block, DFInteractivePlot):
-        note = block.title or "Interactive plot (view in Streamlit)"
-        flows.append(_paragraph(note, template))
+    elif isinstance(block, FigureBlock):
+        flows.extend(_figure_flowables(block, template, numbering, labels))
+    elif isinstance(block, TableBlock):
+        flows.extend(_table_with_caption(block, template, numbering, labels))
+    elif isinstance(block, InteractiveFigure):
+        flows.extend(_figure_flowables(block.figure, template, numbering, labels))
     elif isinstance(block, CorePageBreak):
         flows.append(RLPageBreak())
     elif isinstance(block, DataFrameBlock):
         flows.extend(_render_dataframe(block, template))
     elif isinstance(block, Section):
-        flows.extend(_render_section(block, template))
+        flows.extend(_render_section(block, template, numbering, labels))
     elif isinstance(block, FlowableDirective):
         produced = block.factory(template)
         if produced is not None:
@@ -359,7 +567,7 @@ def _block_flowables(block: Any, template: PDFTemplate) -> List[Any]:
             else:
                 flows.append(produced)
     elif isinstance(block, TwoColumnDirective):
-        flows.extend(_two_column_flowables(block, template))
+        flows.extend(_two_column_flowables(block, template, numbering, labels))
     elif isinstance(block, AbsoluteImageDirective):
         flows.append(_AbsoluteImageFlowable(block))
     elif isinstance(block, FloatingImageDirective):
@@ -377,13 +585,18 @@ def _block_flowables(block: Any, template: PDFTemplate) -> List[Any]:
     return flows
 
 
-def _render_section(section: Section, template: PDFTemplate) -> List[Any]:
+def _render_section(
+    section: Section,
+    template: PDFTemplate,
+    numbering: _NumberingState,
+    labels: Dict[str, str],
+) -> List[Any]:
     flowables: List[Any] = []
     flowables.append(_heading(section.title, section.level, template, section.pdf_style))
-    flowables.append(Spacer(1, template.base_font_size * 0.35))
+    flowables.append(Spacer(1, template.base_font_size * template.section_spacing))
     for blk in section.blocks:
-        flowables.extend(_block_flowables(blk, template))
-        flowables.append(Spacer(1, template.base_font_size * 0.35))
+        flowables.extend(_block_flowables(blk, template, numbering, labels))
+        flowables.append(Spacer(1, template.base_font_size * template.section_spacing))
     return flowables
 
 
@@ -410,18 +623,24 @@ def report_to_pdf(rpt: Report, out_pdf_path: str, template: Optional[PDFTemplate
     template = template or PDFTemplate()
     if template.footer_fn is None:
         template.footer_fn = _default_footer
-    doc = template.make_document(out_pdf_path)
+    numbering = _NumberingState()
+    labels: Dict[str, str] = {}
+    on_page = _on_page(template)
+    doc = template.make_document(out_pdf_path, on_page)
+    is_simple = isinstance(doc, SimpleDocTemplate)
     story: List[Any] = []
     story.append(_heading(rpt.title, 1, template, rpt.pdf_style))
     if rpt.author:
         story.append(_paragraph(f"Author: {rpt.author}", template))
     if rpt.date_str:
         story.append(_paragraph(rpt.date_str, template))
-    story.append(Spacer(1, template.base_font_size))
+    story.append(Spacer(1, template.base_font_size * template.section_spacing))
     for section in rpt.sections:
-        story.extend(_render_section(section, template))
-    on_page = _on_page(template)
-    doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
+        story.extend(_render_section(section, template, numbering, labels))
+    if is_simple:
+        doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
+    else:
+        doc.build(story)
     return out_pdf_path
 
 
@@ -448,84 +667,3 @@ def markdown_to_html(md_text: str, title: str = "Report", extra_css: Optional[st
         f"<!doctype html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<title>{title}</title>\n"
         f"<style>{css}</style>\n</head>\n<body>\n{body}\n</body>\n</html>"
     )
-
-
-def markdown_to_pdf(
-    md_text: str,
-    out_pdf_path: str,
-    base_url: str = ".",
-    css_path: str | None = None,
-    extra_css: str | None = None,
-) -> str:
-    from reportlab.lib.styles import getSampleStyleSheet
-    from reportlab.platypus import Image as RLImage
-
-    styles = getSampleStyleSheet()
-    normal = styles["Normal"]
-
-    def make_heading(text: str) -> Paragraph:
-        return Paragraph(f"<b>{text}</b>", normal)
-
-    def try_table(start_idx: int, lines: List[str]) -> tuple[Optional[RLTable], int]:
-        header_line = lines[start_idx]
-        if start_idx + 1 >= len(lines):
-            return None, 0
-        sep_line = lines[start_idx + 1]
-        if not header_line.strip().startswith("|") or not set(sep_line.strip()) <= set("|- "):
-            return None, 0
-        data: List[List[str]] = []
-        header = [c.strip() for c in header_line.strip().strip("|").split("|")]
-        data.append(header)
-        i = start_idx + 2
-        while i < len(lines) and lines[i].strip().startswith("|"):
-            row = [c.strip() for c in lines[i].strip().strip("|").split("|")]
-            data.append(row)
-            i += 1
-        tbl = RLTable(data)
-        tbl.setStyle(
-            TableStyle([
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#efefef")),
-            ])
-        )
-        return tbl, (i - start_idx)
-
-    anchor_line_re = re.compile(r"^\s*<a id=['\"][^'\"]+['\"]></a>\s*$")
-    anchor_inline_re = re.compile(r"\s*<a id=['\"][^'\"]+['\"]></a>\s*$")
-
-    def strip_anchor(text: str) -> str:
-        return anchor_inline_re.sub("", text).strip()
-
-    story: List[Any] = []
-    raw_lines = md_text.splitlines()
-    lines = [ln for ln in raw_lines if not anchor_line_re.match(ln)]
-    i = 0
-    while i < len(lines):
-        ln = lines[i]
-        if ln.startswith("# "):
-            story.append(make_heading(strip_anchor(ln[2:]).strip()))
-        elif ln.startswith("## "):
-            story.append(make_heading(strip_anchor(ln[3:]).strip()))
-        elif ln.startswith("### "):
-            story.append(make_heading(strip_anchor(ln[4:]).strip()))
-        elif ln.strip().startswith("|"):
-            tbl, consumed = try_table(i, lines)
-            if tbl is not None and consumed > 0:
-                story.append(tbl)
-                i += consumed
-                continue
-        elif ln.strip().startswith("![") and "](" in ln:
-            try:
-                start = ln.index("(")
-                end = ln.index(")", start)
-                path = ln[start + 1 : end]
-                story.append(RLImage(path))
-            except Exception:
-                pass
-        elif ln.strip():
-            story.append(Paragraph(ln, normal))
-        i += 1
-
-    doc = SimpleDocTemplate(out_pdf_path, pagesize=letter)
-    doc.build(story)
-    return out_pdf_path

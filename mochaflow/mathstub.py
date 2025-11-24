@@ -1,4 +1,4 @@
-# mdreport/mathstub.py (moved under mochaflow)
+# mochaflow/mathstub.py (moved under mochaflow)
 from __future__ import annotations
 import hashlib, io
 from pathlib import Path

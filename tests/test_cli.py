@@ -42,13 +42,12 @@ def test_cli_with_builder_outputs_md(tmp_path):
     assert "## S" in content
     assert "Hello" in content
 
-@pytest.mark.pdf
-def test_cli_from_md_to_pdf(tmp_path, ensure_pdf_capability):
+def test_cli_from_md_pdf_is_rejected(tmp_path):
+    """`--from-md` cannot produce PDFs because PDF rendering needs a Report."""
     md_path = tmp_path / "r.md"
     pdf_path = tmp_path / "r.pdf"
     md_path.write_text("# PDF\n\n**ok**\n", encoding="utf-8")
     cmd = [PYTHON, "-m", "mochaflow.cli", "--from-md", str(md_path), "--pdf", str(pdf_path)]
     res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    assert res.returncode == 0, res.stderr
-    assert pdf_path.exists()
-    assert pdf_path.read_bytes()[:4] == b"%PDF"
+    assert res.returncode == 2
+    assert "--from-md cannot produce PDFs" in res.stderr
