@@ -1,3 +1,32 @@
 # pixi environments
 .pixi/*
 !.pixi/config.toml
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Python caches
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.pyc
+*.pyo
+*.pyd
+
+# Coverage / tooling
+.coverage
+.hypothesis/
+
+# Generated assets from renders
+.mochaflow_assets/
+.mdreport_assets/
+.mochaflow_figs/
+.manymark_figs/
+.mochaflow_math/
+.manymark_math/
+
+# MkDocs output
+site/
