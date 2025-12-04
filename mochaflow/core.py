@@ -20,6 +20,7 @@ from typing import (
 import unicodedata
 import re
 import hashlib
+import warnings
 from typing import TYPE_CHECKING
 
 from .pdfmixins import (
@@ -575,6 +576,7 @@ class Report:
     meta: Dict[str, Any] = field(default_factory=dict)
     sections: List[Section] = field(default_factory=list)
     pdf_style: Dict[str, Any] = field(default_factory=dict)
+    pdf_template_options: Dict[str, Any] = field(default_factory=dict)
 
     # Streamlit customization/state
     streamlit_options: Dict[str, Any] = field(default_factory=dict)
@@ -601,9 +603,35 @@ class Report:
         """
 
         self._ensure_label_index()
-        from .render import report_to_pdf  # local import to avoid circular dependency
+        from .render import PDFTemplate, report_to_pdf  # local import to avoid circular dependency
 
-        return report_to_pdf(self, out_pdf_path=path, template=template)
+        supplied_template = template is not None
+        tpl = template or PDFTemplate()
+        self._apply_pdf_template_overrides(tpl, user_template=supplied_template)
+        return report_to_pdf(self, out_pdf_path=path, template=tpl)
+    def configure_pdf(self, **options) -> "Report":
+        """Configure PDF-level layout defaults without manually creating a template.
+
+        Supported keys include:
+        - page_size: tuple/list of (width, height) in points
+        - margins: iterable of four values (left, right, top, bottom) in points
+        - margin_left/margin_right/margin_top/margin_bottom: individual overrides
+        - layout / first_page_layout / column_gap
+        - font, font_bold, mono_font, base_font_size, h1, h2, h3, line_spacing
+        - header_fn / footer_fn: callables with signature (canvas, template, page_num)
+        - figure_caption_style / table_caption_style: dicts merged into caption styles
+        """
+
+        for key, value in options.items():
+            if key in {"figure_caption_style", "table_caption_style"} and isinstance(value, dict):
+                merged = dict(self.pdf_template_options.get(key, {}))
+                merged.update(value)
+                self.pdf_template_options[key] = merged
+            elif key == "margins":
+                self.pdf_template_options[key] = tuple(value)  # type: ignore[arg-type]
+            else:
+                self.pdf_template_options[key] = value
+        return self
 
     def add_section(self, title: str) -> Section:
         sec = Section(title=title, level=2)
@@ -619,6 +647,68 @@ class Report:
                     yield from _rec(b)
         for s in self.sections:
             yield from _rec(s)
+
+    def _apply_pdf_template_overrides(self, template: "PDFTemplate", *, user_template: bool) -> None:  # type: ignore[name-defined]
+        if not self.pdf_template_options:
+            return
+
+        def warn_override(attr: str, old: Any, new: Any) -> None:
+            warnings.warn(
+                f"configure_pdf() overriding template.{attr} (was {old!r}, now {new!r})",
+                UserWarning,
+                stacklevel=3,
+            )
+
+        def assign(attr: str, value: Any) -> None:
+            current = getattr(template, attr)
+            if user_template and current != value:
+                warn_override(attr, current, value)
+            setattr(template, attr, value)
+
+        overrides = self.pdf_template_options
+        if "margins" in overrides:
+            margins = overrides["margins"]
+            if not isinstance(margins, (list, tuple)) or len(margins) != 4:
+                raise ValueError("configure_pdf(margins=...) expects four values (left, right, top, bottom).")
+            left, right, top, bottom = margins
+            assign("margin_left", float(left))
+            assign("margin_right", float(right))
+            assign("margin_top", float(top))
+            assign("margin_bottom", float(bottom))
+
+        direct_attrs = {
+            "page_size",
+            "margin_left",
+            "margin_right",
+            "margin_top",
+            "margin_bottom",
+            "layout",
+            "first_page_layout",
+            "column_gap",
+            "font",
+            "font_bold",
+            "mono_font",
+            "base_font_size",
+            "h1",
+            "h2",
+            "h3",
+            "line_spacing",
+            "header_fn",
+            "footer_fn",
+        }
+        for attr in direct_attrs:
+            if attr in overrides:
+                assign(attr, overrides[attr])
+
+        for style_key in ("figure_caption_style", "table_caption_style"):
+            if style_key in overrides:
+                style_update = dict(overrides[style_key])
+                base = getattr(template, style_key)
+                for key, value in style_update.items():
+                    old = base.get(key)
+                    if user_template and old != value:
+                        warn_override(f"{style_key}.{key}", old, value)
+                base.update(style_update)
 
     def find_section(self, title: str) -> Optional[Section]:
         t = title.strip().lower()

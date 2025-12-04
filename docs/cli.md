@@ -5,7 +5,7 @@ title: CLI
 # Command Line Interface
 
 MochaFlow includes a simple CLI module that can:
-- Convert an existing Markdown file to HTML
+- Convert an existing Markdown file to HTML or PDF (PDF requires the `weasy` extra)
 - Run a Python “builder” module that returns a `Report` (or Markdown string) and write outputs
 
 Invocation
@@ -19,7 +19,7 @@ Flags
   - The function should return either a `Report` or a Markdown `str`
 - `--md OUT.md`: Write the Markdown string to a file
 - `--html OUT.html`: Render HTML and write to a file
-- `--pdf OUT.pdf`: Render a PDF via `Report.write_pdf` (only available when `build_report()` returns a `Report`)
+- `--pdf OUT.pdf`: Render a PDF via `Report.write_pdf` (builder path) or WeasyPrint (when using `--from-md` with the `weasy` extra installed)
 
 Mutually Exclusive
 - `--from-md` and `--builder` cannot be used together
@@ -28,6 +28,11 @@ Examples
 Convert Markdown to HTML
 ```bash
 python -m mochaflow.cli --from-md report.md --html report.html
+```
+
+Convert Markdown to PDF (requires `pip install "MochaFlow[weasy]"`)
+```bash
+python -m mochaflow.cli --from-md report.md --pdf report.pdf
 ```
 
 Run a Python builder
@@ -51,5 +56,5 @@ python -m mochaflow.cli --builder builder.py --pdf out.pdf
 
 Notes
 - The CLI prefers Cyclopts if installed, but falls back to a tiny internal parser to remain dependency-light.
-- PDF output is only available when the builder returns a `Report`; `--from-md` cannot produce PDFs.
-- Ensure images referenced by Markdown are accessible on disk when generating HTML.
+- Plain-Markdown PDFs rely on WeasyPrint; install via `pip install "MochaFlow[weasy]"` (builder PDFs continue to use ReportLab).
+- Ensure images referenced by Markdown are accessible on disk when generating HTML/PDF.

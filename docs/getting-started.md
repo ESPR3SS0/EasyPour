@@ -62,8 +62,10 @@ app.run_server(debug=True)
 ```
 
 CLI Basics
-- From Markdown to HTML: `python -m mochaflow.cli --from-md report.md --html report.html`
-- From a Python builder to outputs (including PDF when `build_report()` returns a `Report`): see the CLI page.
+- From Markdown to HTML/PDF (PDF requires `MochaFlow[weasy]`):
+  - `python -m mochaflow.cli --from-md report.md --html report.html`
+  - `python -m mochaflow.cli --from-md report.md --pdf report.pdf`
+- From a Python builder to outputs (including ReportLab-backed PDF): see the CLI page.
 
 ## End-to-End Workflow (Artifacts + Previews)
 

@@ -10,6 +10,7 @@ Core Types
   - `to_markdown() -> str`: YAML front matter + document body
   - `write_markdown(path) -> str`: write Markdown and return absolute path
   - `write_pdf(path, template=None) -> str`: render this report directly to PDF (ReportLab)
+  - `configure_pdf(**options) -> Report`: set PDF defaults (page size, margins, fonts, layout, column gap, header/footer callables, caption styles) without instantiating `PDFTemplate` manually. When a template is also supplied to `write_pdf()`, these code-level choices take precedence and emit a warning whenever they override a value from the provided template.
 - `Section(title, level=2)`
   - `add_text(*paragraphs) -> Section`: add one or more paragraphs
   - `add_table(Table) -> Section`

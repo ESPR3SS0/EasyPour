@@ -12,6 +12,8 @@ Pick one of the options below.
 
 - From PyPI (if/when published):
   - `pip install MochaFlow`
+- Include optional WeasyPrint dependency (for Markdown→PDF via CLI):
+  - `pip install "MochaFlow[weasy]"`
 - From source (this repo):
   - `pip install .`  (or editable: `pip install -e .`)
 
@@ -50,6 +52,17 @@ open("report.html", "w", encoding="utf-8").write(html)
 # Render to PDF (ReportLab backend)
 rpt.write_pdf("report.pdf")
 
+# Configure PDF defaults in code (page size, margins, fonts, captions)
+rpt.configure_pdf(
+    page_size=(8.5 * 72, 11 * 72),
+    margins=(54, 54, 72, 72),
+    layout="two",
+    column_gap=22,
+    font="Times-Roman",
+    figure_caption_style={"font": "Times-Italic"},
+)
+rpt.write_pdf("report_two_col.pdf")
+
 # Use the IEEE preset for two-column output (optional)
 from mochaflow.ieee import IEEETemplate
 rpt.write_pdf("report_ieee.pdf", template=IEEETemplate())
@@ -58,8 +71,9 @@ rpt.write_pdf("report_ieee.pdf", template=IEEETemplate())
 ## Quick Start (CLI)
 You can also use the CLI module.
 
-- From an existing Markdown file to HTML:
+- From an existing Markdown file to HTML/PDF (PDF requires `MochaFlow[weasy]`):
   - `python -m mochaflow.cli --from-md report.md --html report.html`
+  - `python -m mochaflow.cli --from-md report.md --pdf report.pdf`
 - From a Python builder to Markdown/HTML/PDF:
   1) Create `builder.py` with a `build_report()` function that returns either a `Report` or a Markdown `str`:
      ```python
@@ -85,6 +99,7 @@ Tip: `--builder` and `--from-md` are mutually exclusive.
 - Figures/tables with numbering: `Section.add_figure(...)` / `Section.add_table(..., numbered=True)` auto-generate IEEE-style captions.
 - Citations: `Report.add_reference(...)` + `report.cite("smith19")` give you `[1]` references and an auto-built References section.
 - Layout control: `PDFTemplate(layout="two", column_gap=24)` or even `template.register_layout("cover", builder)` let you define single/two/custom column frames and caption styles without touching ReportLab internals.
+- Global PDF tuning without templates: `report.configure_pdf(page_size=..., margins=..., font="Times-Roman", header_fn=...)` sets default page size, margins, fonts, column layouts, headers/footers, and caption styles. If you also pass a custom template, MochaFlow will warn when your code-level choices override template values so you always know which settings win.
 - Interactive plots: `Section.add_matplotlib(fig, interactive=True)` keeps the PDF static while upgrading the Streamlit/Dash view to Plotly (zoom/pan/hover).
 - Cross references: Label figures/tables (`label="fig:latency"`) and drop `report.ref("fig:latency")` anywhere to emit `Figure N`.
 - Sensible HTML defaults: readable fonts, clean tables, page numbers for PDF.

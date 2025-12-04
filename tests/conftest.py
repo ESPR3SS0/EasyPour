@@ -75,4 +75,22 @@ def ensure_pdf_capability():
         pytest.skip("ReportLab is not available.")
 
 
+def can_weasy():
+    """Check if WeasyPrint can produce a trivial PDF."""
+    try:
+        from weasyprint import HTML  # type: ignore
+        buf = io.BytesIO()
+        HTML(string="<p>ok</p>").write_pdf(buf)
+        data = buf.getvalue()
+        return isinstance(data, (bytes, bytearray)) and data[:4] == b"%PDF"
+    except Exception:
+        return False
+
+
+@pytest.fixture
+def ensure_weasy_capability():
+    if not can_weasy():
+        pytest.skip("WeasyPrint is not available.")
+
+
 ## borb backend fully removed; no borb fixtures

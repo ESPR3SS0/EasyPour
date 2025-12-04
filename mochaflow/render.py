@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from reportlab.lib import colors
@@ -49,6 +50,7 @@ __all__ = [
     "PDFTemplate",
     "report_to_pdf",
     "markdown_to_html",
+    "markdown_to_pdf",
 ]
 
 
@@ -667,3 +669,23 @@ def markdown_to_html(md_text: str, title: str = "Report", extra_css: Optional[st
         f"<!doctype html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<title>{title}</title>\n"
         f"<style>{css}</style>\n</head>\n<body>\n{body}\n</body>\n</html>"
     )
+
+
+def markdown_to_pdf(
+    md_text: str,
+    output: str | Path,
+    *,
+    title: str = "Report",
+    extra_css: Optional[str] = None,
+) -> str:
+    """Render Markdown to PDF via WeasyPrint (HTML + CSS pipeline)."""
+    html = markdown_to_html(md_text, title=title, extra_css=extra_css)
+    try:
+        from weasyprint import HTML  # type: ignore
+    except Exception as exc:  # pragma: no cover - dependency missing
+        raise ImportError(
+            "WeasyPrint is required for markdown_to_pdf(); install MochaFlow[weasy] or pip install weasyprint."
+        ) from exc
+    out = Path(output)
+    HTML(string=html).write_pdf(str(out))
+    return str(out.resolve())

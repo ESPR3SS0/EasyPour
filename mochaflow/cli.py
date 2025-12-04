@@ -9,7 +9,8 @@ import importlib.util
 import pathlib
 import sys
 from typing import Optional
-from .render import markdown_to_html
+
+from .render import markdown_to_html, markdown_to_pdf
 
 def _load_builder(py_path: pathlib.Path):
     spec = importlib.util.spec_from_file_location("report_builder", str(py_path))
@@ -20,6 +21,16 @@ def _load_builder(py_path: pathlib.Path):
         print("Builder module must define build_report() -> (markdown:str or report_obj)", file=sys.stderr)
         sys.exit(2)
     return mod.build_report()
+
+
+def _guess_md_title(md_text: str) -> Optional[str]:
+    for line in md_text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            heading = stripped.lstrip("#").strip()
+            if heading:
+                return heading
+    return None
 
 def _run(
     builder: Optional[pathlib.Path],
@@ -33,11 +44,11 @@ def _run(
         return 2
 
     report_obj = None
+    title_hint: Optional[str] = None
+    md_text: Optional[str] = None
     if from_md:
-        if pdf:
-            print("--from-md cannot produce PDFs; provide a builder that returns Report.", file=sys.stderr)
-            return 2
         md_text = from_md.read_text(encoding="utf-8")
+        title_hint = _guess_md_title(md_text)
     else:
         if not builder:
             print("--builder or --from-md is required", file=sys.stderr)
@@ -46,21 +57,30 @@ def _run(
         if hasattr(obj, "to_markdown"):
             md_text = obj.to_markdown()
             report_obj = obj if hasattr(obj, "write_pdf") else None
+            title_hint = getattr(obj, "title", None)
         elif isinstance(obj, str):
             md_text = obj
         else:
             print("build_report() should return a Report or Markdown string.", file=sys.stderr)
             return 2
 
+    assert md_text is not None
     if md:
         md.write_text(md_text, encoding="utf-8")
     if html:
         html.write_text(markdown_to_html(md_text), encoding="utf-8")
     if pdf:
         if not report_obj:
-            print("PDF output requires build_report() to return mochaflow.Report.", file=sys.stderr)
-            return 2
-        report_obj.write_pdf(str(pdf))
+            try:
+                markdown_to_pdf(md_text, str(pdf), title=title_hint or "Report")
+            except ImportError:
+                print(
+                    "PDF output from Markdown requires WeasyPrint; install MochaFlow[weasy] or pip install weasyprint.",
+                    file=sys.stderr,
+                )
+                return 2
+        else:
+            report_obj.write_pdf(str(pdf))
     return 0
 
 

@@ -9,7 +9,7 @@ names (bold/italic/underline/url) depending on what the core module provides.
 """
 
 # file: mochaflow/__init__.py
-from .render import markdown_to_html
+from .render import markdown_to_html, markdown_to_pdf
 from .ieee import IEEETemplate
 
 # Core types are stable
@@ -40,6 +40,7 @@ __all__ = [
     "Image",
     "code",
     "markdown_to_html",
+    "markdown_to_pdf",
     "IEEETemplate",
 ]
 
