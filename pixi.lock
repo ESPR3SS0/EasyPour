@@ -3227,13 +3227,15 @@ packages:
 - pypi: ./
   name: pourover
   version: 0.1.0
-  sha256: 00b79b245e64e80d17aa0945a57bc0afbf4400214fe4a68526956f1cb2149579
+  sha256: 1354ae73658733d1216347589e2bdf4671f110bf9660d5d6d9b4afa634ce07db
   requires_dist:
   - pytest>=9.0.1,<10
   - cyclopts>=2.7,<3 ; extra == 'cli'
   - streamlit>=1.50.0,<2 ; extra == 'streamlit'
   - dash>=3.2.0,<4 ; extra == 'dash'
-  - mkdocs ; extra == 'docs'
+  - mkdocs>=1.6.1,<2 ; extra == 'docs'
+  - mkdocs-material>=9.6.22,<10 ; extra == 'docs'
+  - pymdown-extensions>=10.12,<11 ; extra == 'docs'
   - matplotlib ; extra == 'plots'
   - pytest>=8.4.2,<9 ; extra == 'dev'
   - ruff>=0.6.0,<0.7 ; extra == 'dev'

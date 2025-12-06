@@ -13,7 +13,11 @@ dependencies = ["pytest>=9.0.1,<10"]
 cli = ["cyclopts>=2.7,<3"]
 streamlit = ["streamlit>=1.50.0,<2"]
 dash = ["dash>=3.2.0,<4"]
-docs = ["mkdocs"]
+docs = [
+  "mkdocs>=1.6.1,<2",
+  "mkdocs-material>=9.6.22,<10",
+  "pymdown-extensions>=10.12,<11",
+]
 plots = ["matplotlib"]
 dev = ["pytest>=8.4.2,<9", "ruff>=0.6.0,<0.7"]
 weasy = ["weasyprint>=66.0,<67"]

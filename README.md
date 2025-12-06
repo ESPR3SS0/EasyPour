@@ -124,6 +124,17 @@ Tip: `--builder` and `--from-md` are mutually exclusive.
 
 Enjoy making many marks! ✨
 
+## Documentation
+
+The docs site lives under `docs/` and is built with MkDocs Material. Install the optional extras and run:
+
+```bash
+pip install ".[docs]"
+mkdocs serve
+```
+
+Commits to `main` automatically build and publish the static site to GitHub Pages.
+
 ## More Examples
 
 All examples below are pure Python — you can drop them in a `builder.py` and run them via the CLI too.
