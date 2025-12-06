@@ -1,6 +1,8 @@
-# EasyPour — Markdown Reports to HTML/PDF (with a smile)
+# EasyPour — Pour beatiful reports easily
 
-Turn tidy Python objects into Markdown, then to beautiful HTML and PDF — all with a tiny, friendly API and a simple CLI.
+Plug in your data, your graphs, your words, and genrate Markdown reports, PDF reports, or even
+streamlit / dash dashboards easily!
+
 
 ## What Is It?
 - Build a `Report` of nested `Section`s with text, `Table`s, and `Image`s.

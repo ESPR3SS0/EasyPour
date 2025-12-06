@@ -66,8 +66,8 @@ mkdocs = ">=1.6.1,<2"
 matplotlib = ">=3.10.7,<4"
 hatch = ">=1.14.1,<2"
 mkdocs-material = ">=9.6.22,<10"
-twine = ">=6.2.0,<7"
 pytest = ">=9.0.1,<10"
+twine = ">=6.2.0,<7"
 
 
 

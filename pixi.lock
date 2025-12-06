@@ -1125,7 +1125,7 @@ packages:
 - pypi: ./
   name: easypour
   version: 0.1.0
-  sha256: 06e557049a3f1aa5c7d0f14f9e216e50ab35599fee1326ed007020fe8cb157b4
+  sha256: 5f8e48500faea69305c37acba3c8dfa030a36b20de87d084b864c1907d93f433
   requires_dist:
   - markdown-it-py>=4.0.0,<5
   - reportlab>=4.4.4,<5
