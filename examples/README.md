@@ -1,4 +1,4 @@
-# MochaFlow Examples
+# PourOver Examples
 
 This folder contains a few end‑to‑end examples that generate Markdown/HTML/PDF and show interactive previews.
 

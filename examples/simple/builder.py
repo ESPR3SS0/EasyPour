@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from mochaflow import Report, Table
+from pourover import Report, Table
 
 
 def build_report() -> Report:

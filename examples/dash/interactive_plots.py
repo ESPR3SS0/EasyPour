@@ -1,4 +1,4 @@
-"""Dash interactive Matplotlib => Plotly demo for MochaFlow.
+"""Dash interactive Matplotlib => Plotly demo for PourOver.
 
 Run:
   python examples/dash/interactive_plots.py
@@ -9,10 +9,10 @@ import pathlib
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-if (ROOT / "mochaflow").exists() and str(ROOT) not in sys.path:
+if (ROOT / "pourover").exists() and str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from mochaflow.core import Report
+from pourover.core import Report
 
 
 def _make_plot(frequency: float, title: str):
@@ -46,7 +46,7 @@ def build_report() -> Report:
             continue
         sec.add_matplotlib(
             fig,
-            out_dir=".mochaflow_figs",
+            out_dir=".pourover_figs",
             filename=f"dash_freq_{freq}.png",
             caption="Zoom/pan within Dash; static PNG in Markdown/PDF.",
             width="75%",

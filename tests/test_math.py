@@ -1,6 +1,6 @@
 import pytest
 
-from mochaflow import Report, tex_to_png
+from pourover import Report, tex_to_png
 
 
 def _require_matplotlib():

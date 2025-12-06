@@ -1,7 +1,7 @@
 # tests/test_inline_parser.py
 import pytest
 
-from mochaflow.inline import parse_inline
+from pourover.inline import parse_inline
 
 
 def text_of(runs):

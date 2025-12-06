@@ -1,4 +1,4 @@
-"""Streamlit example for MochaFlow.
+"""Streamlit example for PourOver.
 
 Run:
   streamlit run examples/streamlit/app.py
@@ -13,10 +13,10 @@ import pathlib, sys
 
 # Prefer the local repository package when running examples from source
 _ROOT = pathlib.Path(__file__).resolve().parents[2]
-if (_ROOT / "mochaflow").exists() and str(_ROOT) not in sys.path:
+if (_ROOT / "pourover").exists() and str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from mochaflow.core import Report, Table, Image
+from pourover.core import Report, Table, Image
 
 
 def _make_demo_plot():
@@ -68,7 +68,7 @@ def build_report(
         if fig is not None:
             rpt.add_section("Plot").add_matplotlib(
                 fig,
-                out_dir=".mochaflow_figs",
+                out_dir=".pourover_figs",
                 filename="demo_plot.png",
                 caption="A tiny demo plot",
                 width="60%",
@@ -86,7 +86,7 @@ def build_report(
                     "std": [0.08, 0.14, 0.22],
                 }
             )
-            # Convert DataFrame to a MochaFlow Table for consistent rendering
+            # Convert DataFrame to a PourOver Table for consistent rendering
             tbl = Table(headers=list(df.columns), rows=df.values.tolist())
             rpt.add_section("Pandas DataFrame").add_table(tbl)
         except Exception:
@@ -103,8 +103,8 @@ if __name__ == "__main__":
         rpt = build_report(include_table=True, include_image=False, include_plot=True)
         print(rpt.to_markdown())
     else:
-        st.set_page_config(page_title="MochaFlow + Streamlit", layout="wide")
-        st.title("MochaFlow + Streamlit")
+        st.set_page_config(page_title="PourOver + Streamlit", layout="wide")
+        st.title("PourOver + Streamlit")
         st.sidebar.header("Options")
         opt_table = st.sidebar.checkbox("Include table", value=True)
         opt_image = st.sidebar.checkbox("Include image placeholder", value=False)
@@ -117,7 +117,7 @@ if __name__ == "__main__":
             if fig is not None:
                 rpt.add_section("Interactive Plot").add_matplotlib(
                     fig,
-                    out_dir=".mochaflow_figs",
+                    out_dir=".pourover_figs",
                     filename="interactive_demo.png",
                     caption="Zoom/pan in Streamlit/Dash via Plotly; rendered as PNG in Markdown/PDF.",
                     width="70%",

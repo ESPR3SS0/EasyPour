@@ -1,6 +1,6 @@
 # tests/test_section_report_structure.py
 import re
-from mochaflow import Report
+from pourover import Report
 
 def test_report_markdown_front_matter_and_title(sample_report):
     md = sample_report.to_markdown()

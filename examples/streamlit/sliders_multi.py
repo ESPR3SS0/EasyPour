@@ -1,4 +1,4 @@
-"""Streamlit interactive plots demo for MochaFlow.
+"""Streamlit interactive plots demo for PourOver.
 
 Run:
   streamlit run examples/streamlit/sliders_multi.py
@@ -14,10 +14,10 @@ import pathlib, sys
 
 # Prefer the local repository package when running examples from source
 _ROOT = pathlib.Path(__file__).resolve().parents[2]
-if (_ROOT / "mochaflow").exists() and str(_ROOT) not in sys.path:
+if (_ROOT / "pourover").exists() and str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from mochaflow.core import Report, Table
+from pourover.core import Report, Table
 
 
 def _make_dataset(n: int = 60):
@@ -57,7 +57,7 @@ def build_report() -> Report:
     # A wordier introduction to set context
     intro = rpt.add_section("Background")
     intro.add_text(
-        "This report illustrates how MochaFlow can render static matplotlib figures ",
+        "This report illustrates how PourOver can render static matplotlib figures ",
         "into Markdown/PDF while automatically upgrading them to interactive Plotly ",
         "charts inside Streamlit/Dash. Use the zoom and pan controls in the Report tab ",
         "to explore each data series; the PDF still receives the same figure as a PNG.",
@@ -102,7 +102,7 @@ def build_report() -> Report:
     if fig1 is not None:
         s1.add_matplotlib(
             fig1,
-            out_dir=".mochaflow_figs",
+            out_dir=".pourover_figs",
             filename="y_base.png",
             caption="Baseline relationship (≈0.8 slope).",
             width="70%",
@@ -118,7 +118,7 @@ def build_report() -> Report:
     if fig2 is not None:
         s2.add_matplotlib(
             fig2,
-            out_dir=".mochaflow_figs",
+            out_dir=".pourover_figs",
             filename="y_offset.png",
             caption="Offset variant (+1.5 intercept).",
             width="70%",
@@ -134,7 +134,7 @@ def build_report() -> Report:
     if fig3 is not None:
         s3.add_matplotlib(
             fig3,
-            out_dir=".mochaflow_figs",
+            out_dir=".pourover_figs",
             filename="y_steep.png",
             caption="Steeper relationship (≈1.2 slope).",
             width="70%",

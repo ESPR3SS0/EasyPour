@@ -1,4 +1,4 @@
-"""Multi-figures and tables PDF export example for MochaFlow.
+"""Multi-figures and tables PDF export example for PourOver.
 
 Run:
   python examples/pdf/multi_figs_tables.py
@@ -15,10 +15,10 @@ import sys
 
 # Prefer the local repository package when running examples from source
 _ROOT = pathlib.Path(__file__).resolve().parents[2]
-if (_ROOT / "mochaflow").exists() and str(_ROOT) not in sys.path:
+if (_ROOT / "pourover").exists() and str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from mochaflow.core import Report, Table
+from pourover.core import Report, Table
 
 
 def _make_plot_sin_cos(out_dir: pathlib.Path) -> str | None:
@@ -68,7 +68,7 @@ def build_report() -> Report:
 
     # Figures
     figs = rpt.add_section("Figures")
-    out_dir = _ROOT / ".mochaflow_figs"
+    out_dir = _ROOT / ".pourover_figs"
     p1 = _make_plot_sin_cos(out_dir)
     p2 = _make_plot_scatter(out_dir)
     if p1:

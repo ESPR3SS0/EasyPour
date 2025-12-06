@@ -1,4 +1,4 @@
-"""Complex PDF export example for MochaFlow.
+"""Complex PDF export example for PourOver.
 
 Run (generate Markdown + PDF to examples/out/):
   python examples/pdf/complex_builder.py
@@ -14,10 +14,10 @@ import sys
 
 # Prefer the local repository package when running examples from source
 _ROOT = pathlib.Path(__file__).resolve().parents[2]
-if (_ROOT / "mochaflow").exists() and str(_ROOT) not in sys.path:
+if (_ROOT / "pourover").exists() and str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from mochaflow.core import Report, Table
+from pourover.core import Report, Table
 
 
 def _maybe_matplotlib_plot(out_dir: pathlib.Path) -> str | None:
@@ -40,7 +40,7 @@ def build_report() -> Report:
 
     rpt.add_section("Executive Summary").add_text(
         "This document summarizes key model performance metrics, artifacts, and notes.",
-        "It demonstrates MochaFlow's ability to export a nicely formatted PDF from",
+        "It demonstrates PourOver's ability to export a nicely formatted PDF from",
         "simple Python objects and Markdown composition.",
     )
 
@@ -56,7 +56,7 @@ def build_report() -> Report:
 
     # Artifacts: include a generated plot if matplotlib is available
     artifacts = rpt.add_section("Artifacts")
-    img_path = _maybe_matplotlib_plot(_ROOT / ".mochaflow_figs")
+    img_path = _maybe_matplotlib_plot(_ROOT / ".pourover_figs")
     if img_path:
         artifacts.add_image_path(img_path, alt="throughput", caption="Model throughput over time", width="60%")
     else:

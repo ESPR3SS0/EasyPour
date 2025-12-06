@@ -1,4 +1,4 @@
-# mochaflow/mathstub.py (moved under mochaflow)
+# pourover/mathstub.py (moved under pourover)
 from __future__ import annotations
 import hashlib, io
 from pathlib import Path

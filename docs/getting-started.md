@@ -16,7 +16,7 @@ Optional Extras
 
 Hello, Report
 ```python
-from mochaflow import Report, Table
+from pourover import Report, Table
 
 rpt = Report("Hello Report", author="You")
 rpt.add_section("Summary").add_text("This is a very small report.")
@@ -28,7 +28,7 @@ open("report.md", "w", encoding="utf-8").write(md)
 
 Render to HTML
 ```python
-from mochaflow import markdown_to_html
+from pourover import markdown_to_html
 html = markdown_to_html(md, title=rpt.title)
 open("report.html", "w", encoding="utf-8").write(html)
 ```
@@ -41,7 +41,7 @@ rpt.write_pdf("report.pdf")
 Instant Streamlit Preview
 ```python
 # my_app.py
-from mochaflow import Report, Table
+from pourover import Report, Table
 
 r = Report("Preview Me", author="You")
 r.add_section("Hello").add_text("This is shown in Streamlit.")
@@ -53,7 +53,7 @@ r.show_streamlit()
 Minimal Dash App
 ```python
 # app.py
-from mochaflow import Report
+from pourover import Report
 
 r = Report("Dash Preview")
 r.add_section("Hello").add_text("Rendered in a minimal Dash app.")
@@ -62,9 +62,9 @@ app.run_server(debug=True)
 ```
 
 CLI Basics
-- From Markdown to HTML/PDF (PDF requires `MochaFlow[weasy]`):
-  - `python -m mochaflow.cli --from-md report.md --html report.html`
-  - `python -m mochaflow.cli --from-md report.md --pdf report.pdf`
+- From Markdown to HTML/PDF (PDF requires `PourOver[weasy]`):
+  - `python -m pourover.cli --from-md report.md --html report.html`
+  - `python -m pourover.cli --from-md report.md --pdf report.pdf`
 - From a Python builder to outputs (including ReportLab-backed PDF): see the CLI page.
 
 ## End-to-End Workflow (Artifacts + Previews)
@@ -116,7 +116,7 @@ sec.add_text(
 )
 ```
 
-MochaFlow keeps the numbering consistent in Markdown, PDF, Streamlit, and Dash. If a label does not exist, `report.ref()` raises a `KeyError` (or returns the optional `default=` string).
+PourOver keeps the numbering consistent in Markdown, PDF, Streamlit, and Dash. If a label does not exist, `report.ref()` raises a `KeyError` (or returns the optional `default=` string).
 
 ## Interactive Figures
 

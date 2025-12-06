@@ -4,8 +4,8 @@ import pathlib
 import pytest
 from reportlab.platypus import Spacer
 
-from mochaflow import Report
-from mochaflow.render import PDFTemplate
+from pourover import Report
+from pourover.render import PDFTemplate
 
 pytestmark = pytest.mark.pdf
 
@@ -22,7 +22,7 @@ def test_pdf_mixins_roundtrip(tmp_path, ensure_pdf_capability):
     img = tmp_path / "tiny.png"
     _write_tiny_png(img)
 
-    rpt = Report("Mixins Demo", author="MochaFlow")
+    rpt = Report("Mixins Demo", author="PourOver")
     sec = rpt.add_section("Layout")
     sec.add_two_column_layout(["Left text"], ["Right text"], gap=18)
     sec.add_vertical_space(24)

@@ -1,5 +1,5 @@
 # tests/test_section_lists_codeblocks.py
-from mochaflow.core import Section
+from pourover.core import Section
 from importlib import import_module
 
 

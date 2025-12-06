@@ -1,19 +1,19 @@
-# MochaFlow — Markdown Reports to HTML/PDF (with a smile)
+# PourOver — Markdown Reports to HTML/PDF (with a smile)
 
 Turn tidy Python objects into Markdown, then to beautiful HTML and PDF — all with a tiny, friendly API and a simple CLI.
 
 ## What Is It?
 - Build a `Report` of nested `Section`s with text, `Table`s, and `Image`s.
 - Render Markdown to HTML with tasteful defaults, or to PDF via ReportLab.
-- Drive it from Python or from the command line using `python -m mochaflow.cli`.
+- Drive it from Python or from the command line using `python -m pourover.cli`.
 
 ## Install
 Pick one of the options below.
 
 - From PyPI (if/when published):
-  - `pip install MochaFlow`
+  - `pip install PourOver`
 - Include optional WeasyPrint dependency (for Markdown→PDF via CLI):
-  - `pip install "MochaFlow[weasy]"`
+  - `pip install "PourOver[weasy]"`
 - From source (this repo):
   - `pip install .`  (or editable: `pip install -e .`)
 
@@ -23,7 +23,7 @@ PDF rendering uses ReportLab (pure Python wheels available on PyPI). If you don�
 Create a small report, write Markdown, and export HTML/PDF.
 
 ```python
-from mochaflow import Report, Table, Image, b, i, code
+from pourover import Report, Table, Image, b, i, code
 
 # Build a report
 rpt = Report(title="Weekly Model Analysis", author="ESPR3SS0", meta={"draft": True})
@@ -45,7 +45,7 @@ md_path = rpt.write_markdown("report.md")
 print("Wrote:", md_path)
 
 # Render to HTML (inline CSS included)
-from mochaflow import markdown_to_html
+from pourover import markdown_to_html
 html = markdown_to_html(rpt.to_markdown(), title=rpt.title)
 open("report.html", "w", encoding="utf-8").write(html)
 
@@ -64,30 +64,30 @@ rpt.configure_pdf(
 rpt.write_pdf("report_two_col.pdf")
 
 # Use the IEEE preset for two-column output (optional)
-from mochaflow.ieee import IEEETemplate
+from pourover.ieee import IEEETemplate
 rpt.write_pdf("report_ieee.pdf", template=IEEETemplate())
 ```
 
 ## Quick Start (CLI)
 You can also use the CLI module.
 
-- From an existing Markdown file to HTML/PDF (PDF requires `MochaFlow[weasy]`):
-  - `python -m mochaflow.cli --from-md report.md --html report.html`
-  - `python -m mochaflow.cli --from-md report.md --pdf report.pdf`
+- From an existing Markdown file to HTML/PDF (PDF requires `PourOver[weasy]`):
+  - `python -m pourover.cli --from-md report.md --html report.html`
+  - `python -m pourover.cli --from-md report.md --pdf report.pdf`
 - From a Python builder to Markdown/HTML/PDF:
   1) Create `builder.py` with a `build_report()` function that returns either a `Report` or a Markdown `str`:
      ```python
      # builder.py
-     from mochaflow import Report
+     from pourover import Report
      def build_report():
          r = Report("CLI Report", author="You")
          r.add_section("Hello").add_text("This was generated via the CLI.")
          return r
      ```
   2) Run it:
-     - Markdown: `python -m mochaflow.cli --builder builder.py --md out.md`
-     - HTML: `python -m mochaflow.cli --builder builder.py --html out.html`
-     - PDF (requires `build_report()` to return a `Report`): `python -m mochaflow.cli --builder builder.py --pdf out.pdf`
+     - Markdown: `python -m pourover.cli --builder builder.py --md out.md`
+     - HTML: `python -m pourover.cli --builder builder.py --html out.html`
+     - PDF (requires `build_report()` to return a `Report`): `python -m pourover.cli --builder builder.py --pdf out.pdf`
 
 Tip: `--builder` and `--from-md` are mutually exclusive.
 
@@ -99,13 +99,13 @@ Tip: `--builder` and `--from-md` are mutually exclusive.
 - Figures/tables with numbering: `Section.add_figure(...)` / `Section.add_table(..., numbered=True)` auto-generate IEEE-style captions.
 - Citations: `Report.add_reference(...)` + `report.cite("smith19")` give you `[1]` references and an auto-built References section.
 - Layout control: `PDFTemplate(layout="two", column_gap=24)` or even `template.register_layout("cover", builder)` let you define single/two/custom column frames and caption styles without touching ReportLab internals.
-- Global PDF tuning without templates: `report.configure_pdf(page_size=..., margins=..., font="Times-Roman", header_fn=...)` sets default page size, margins, fonts, column layouts, headers/footers, and caption styles. If you also pass a custom template, MochaFlow will warn when your code-level choices override template values so you always know which settings win.
+- Global PDF tuning without templates: `report.configure_pdf(page_size=..., margins=..., font="Times-Roman", header_fn=...)` sets default page size, margins, fonts, column layouts, headers/footers, and caption styles. If you also pass a custom template, PourOver will warn when your code-level choices override template values so you always know which settings win.
 - Interactive plots: `Section.add_matplotlib(fig, interactive=True)` keeps the PDF static while upgrading the Streamlit/Dash view to Plotly (zoom/pan/hover).
 - Cross references: Label figures/tables (`label="fig:latency"`) and drop `report.ref("fig:latency")` anywhere to emit `Figure N`.
 - Sensible HTML defaults: readable fonts, clean tables, page numbers for PDF.
 - Extra styling: `markdown_to_html(md, extra_css="body { color: #333; }")` or pass a custom `PDFTemplate` to `Report.write_pdf`.
 
-## Why MochaFlow?
+## Why PourOver?
 - Small surface area, batteries included.
 - Markdown first; HTML/PDF are just a render away.
 - Works great in scripts, notebooks, and CI.
@@ -131,7 +131,7 @@ All examples below are pure Python — you can drop them in a `builder.py` and r
 ### Bullets, Checklists, Code Blocks, Strikethrough
 
 ```python
-from mochaflow.core import Report
+from pourover.core import Report
 
 r = Report("Lists + Code")
 s = r.add_section("Goodies")
@@ -146,7 +146,7 @@ open("lists.md", "w").write(r.to_markdown())
 ### Tables (from dicts) and Images (by path)
 
 ```python
-from mochaflow.core import Report, Table
+from pourover.core import Report, Table
 
 r = Report("Data + Image")
 data = [
@@ -160,7 +160,7 @@ r.add_section("Plot").add_image_path("./charts/acc.png", alt="acc", caption="Acc
 ### Matplotlib → Image (inline convenience)
 
 ```python
-from mochaflow.core import Report
+from pourover.core import Report
 import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots(figsize=(3, 2))
@@ -176,11 +176,11 @@ r.write_pdf("mpl.pdf")
 ### Two-Column Layout + References
 
 ```python
-from mochaflow import Report
-from mochaflow.core import Table
-from mochaflow.render import PDFTemplate
+from pourover import Report
+from pourover.core import Table
+from pourover.render import PDFTemplate
 
-r = Report("Two-Column Demo", author="MochaFlow Labs")
+r = Report("Two-Column Demo", author="PourOver Labs")
 r.add_reference("smith19", "Smith et al., 'Cool Paper', IEEE, 2019.")
 
 sec = r.add_section("Results")
@@ -206,7 +206,7 @@ Use `r.ref("fig:latency")` (or any label you assign) anywhere in your narrative 
 ### Math Formulas → Image
 
 ```python
-from mochaflow.core import Report
+from pourover.core import Report
 
 r = Report("Math Demo")
 sec = r.add_section("Equations")
@@ -245,8 +245,8 @@ Run an interactive Streamlit app that builds a report, previews Markdown/HTML, a
 ```python
 # examples/streamlit/app.py (excerpt)
 import streamlit as st
-from mochaflow.core import Report, Table
-from mochaflow import markdown_to_html
+from pourover.core import Report, Table
+from pourover import markdown_to_html
 
 def build_report(include_table: bool) -> Report:
     rpt = Report("Streamlit Demo", author="Examples")
@@ -284,8 +284,8 @@ Run a Dash app that renders the report HTML inside the app.
 ```python
 # examples/dash/app.py (excerpt)
 from dash import Dash, dcc, html, Input, Output
-from mochaflow.core import Report, Table
-from mochaflow import markdown_to_html
+from pourover.core import Report, Table
+from pourover import markdown_to_html
 
 def build_report(include_table: bool) -> Report:
     r = Report("Dash Demo", author="Examples")

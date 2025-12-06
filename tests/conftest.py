@@ -7,14 +7,14 @@ import sys
 import importlib
 import pytest
 
-# Ensure tests import the local workspace mochaflow package, not an installed one.
+# Ensure tests import the local workspace pourover package, not an installed one.
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-if "mochaflow" in sys.modules:
-    del sys.modules["mochaflow"]
+if "pourover" in sys.modules:
+    del sys.modules["pourover"]
 
-from mochaflow import Report, Section, Table, Image
+from pourover import Report, Section, Table, Image
 
 @pytest.fixture
 def tmp_png(tmp_path):

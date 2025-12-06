@@ -1,5 +1,5 @@
-from mochaflow.render import PDFTemplate, _heading
-from mochaflow.ieee import IEEETemplate
+from pourover.render import PDFTemplate, _heading
+from pourover.ieee import IEEETemplate
 
 
 def test_register_layout_invoked():

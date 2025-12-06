@@ -1,5 +1,5 @@
 [project]
-name = "MochaFlow"
+name = "PourOver"
 version = "0.1.0"
 description = "Write markdown report easily! Optionally transform into a PDF, streamlit page, or dash page!"
 readme = "README.md"
@@ -18,11 +18,11 @@ dev = ["pytest>=8.4.2,<9", "ruff>=0.6.0,<0.7"]
 weasy = ["weasyprint>=66.0,<67"]
 
 [project.urls]
-Homepage = "https://github.com/ESPR3SS0/MochaFlow"
-Repository = "https://github.com/ESPR3SS0/MochaFlow"
+Homepage = "https://github.com/ESPR3SS0/PourOver"
+Repository = "https://github.com/ESPR3SS0/PourOver"
 
 [project.scripts]
-mochaflow = "mochaflow.cli:main"
+pourover = "pourover.cli:main"
 
 [build-system]
 requires = ["hatchling>=1.21"]
@@ -30,10 +30,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build]
 include = [
-  "mochaflow/**/*",
+  "pourover/**/*",
   "README.md",
 ]
-packages = ["mochaflow"]
+packages = ["pourover"]
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
@@ -44,7 +44,7 @@ platforms = ["linux-64"]
 [tool.pixi.pypi-dependencies]
 weasyprint = ">=66.0,<67"
 ruff = ">=0.6.0,<0.7"
-MochaFlow = { path = "." }
+PourOver = { path = "." }
 cyclopts = ">=2.7,<3"
 markdown-it-py= ">=4.0.0,<5"
 reportlab=">=4.4.4,<5"

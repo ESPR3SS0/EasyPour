@@ -21,7 +21,7 @@ class IEEETemplate(PDFTemplate):
 
     layout: str = "two"
     running_header_left: str = "PREPRINT"
-    running_header_right: str = "MochaFlow"
+    running_header_right: str = "PourOver"
     include_header: bool = True
     include_page_numbers: bool = True
     first_page_single_column: bool = True

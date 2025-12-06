@@ -1,4 +1,4 @@
-"""Streamlit customization + PDF export example for MochaFlow.
+"""Streamlit customization + PDF export example for PourOver.
 
 Run:
   streamlit run examples/streamlit/pdf_with_customization.py
@@ -14,10 +14,10 @@ import pathlib
 import sys
 
 _ROOT = pathlib.Path(__file__).resolve().parents[2]
-if (_ROOT / "mochaflow").exists() and str(_ROOT) not in sys.path:
+if (_ROOT / "pourover").exists() and str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from mochaflow.core import Report, Table
+from pourover.core import Report, Table
 
 
 def build_report() -> Report:
@@ -74,7 +74,7 @@ if __name__ == "__main__":
             if stmod.session_state.get("include_appendix", True):
                 rep.add_section("Appendix").add_text("Extra notes available when enabled in the sidebar.")
 
-        rpt.configure_streamlit(page_title="MochaFlow — Custom PDF", layout="wide", height=560)
+        rpt.configure_streamlit(page_title="PourOver — Custom PDF", layout="wide", height=560)
         rpt.set_streamlit_hooks(sidebar=_sidebar, before_render=before_render, after_render=after_render)
 
         # Provide an explicit "Save to disk" in addition to the built-in PDF tab

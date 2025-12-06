@@ -1,6 +1,6 @@
 import pytest
 
-from mochaflow.core import Report, Section, Table, TableBlock
+from pourover.core import Report, Section, Table, TableBlock
 
 
 def test_citations_ordering():

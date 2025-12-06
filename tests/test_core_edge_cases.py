@@ -1,6 +1,6 @@
 # tests/test_core_edge_cases.py
 import os
-from mochaflow import Table, Image, Report
+from pourover import Table, Image, Report
 
 
 def test_table_to_markdown_empty_headers():

@@ -1,7 +1,7 @@
 import importlib
 import pytest
 
-from mochaflow import markdown_to_html
+from pourover import markdown_to_html
 
 
 def has_dash():

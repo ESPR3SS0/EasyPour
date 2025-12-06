@@ -1,7 +1,7 @@
 import pathlib
 import pytest
 
-from mochaflow.core import Report, Section
+from pourover.core import Report, Section
 
 # Skip this module if matplotlib is not available
 try:

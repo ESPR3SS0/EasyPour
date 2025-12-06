@@ -1,4 +1,4 @@
-# file: mochaflow/core.py
+# file: pourover/core.py
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -92,7 +92,7 @@ def _slug(s: str) -> str:
 # Simple asset manager for relocating images for HTML/PDF renders
 @dataclass
 class AssetManager:
-    base: Path = Path(".mochaflow_assets")
+    base: Path = Path(".pourover_assets")
 
     def __post_init__(self) -> None:
         self.base.mkdir(parents=True, exist_ok=True)
@@ -343,7 +343,7 @@ class Section:
         self,
         formula: str,
         *,
-        out_dir: str | Path = ".mochaflow_math",
+        out_dir: str | Path = ".pourover_math",
         dpi: int = 220,
         caption: Optional[str] = None,
         width: Optional[Union[int, str]] = None,
@@ -382,7 +382,7 @@ class Section:
 
         Parameters
         - obj: matplotlib.figure.Figure or matplotlib.axes.Axes
-        - out_dir: directory to save the PNG (defaults to .mochaflow_figs)
+        - out_dir: directory to save the PNG (defaults to .pourover_figs)
         - filename: optional PNG filename (defaults to mpl_{index}.png)
         - alt/caption/width: forwarded to Image()
         - dpi: DPI used when saving
@@ -395,7 +395,7 @@ class Section:
         else:
             raise TypeError("add_matplotlib expects a matplotlib Figure or Axes")
 
-        base = Path(out_dir) if out_dir is not None else Path(".mochaflow_figs")
+        base = Path(out_dir) if out_dir is not None else Path(".pourover_figs")
         base.mkdir(parents=True, exist_ok=True)
         fname = filename or f"mpl_{len(self.blocks)}.png"
         out_path = base / fname
@@ -1024,7 +1024,7 @@ class Report:
         download button (when ReportLab is available). Intended usage:
 
             # my_app.py
-            from mochaflow import Report
+            from pourover import Report
             rpt = Report("Demo").add_section("S").add_text("Hello")
             rpt.show_streamlit()
 
@@ -1046,7 +1046,7 @@ class Report:
             raise RuntimeError("Render helpers unavailable.") from e
 
         # Options (with reasonable defaults)
-        page_title = self.streamlit_options.get("page_title", f"MochaFlow — {self.title}")
+        page_title = self.streamlit_options.get("page_title", f"PourOver — {self.title}")
         layout = self.streamlit_options.get("layout", "wide")
         tabs = self.streamlit_options.get("tabs", ["Report", "Markdown", "HTML", "PDF"])
         height = int(self.streamlit_options.get("height", height))
@@ -1295,7 +1295,7 @@ class Report:
         html_doc = markdown_to_html(md_text, title=self.title)
         external = self.dash_options.get("external_stylesheets")
         app = Dash(__name__, external_stylesheets=external)
-        app.title = self.dash_options.get("page_title", f"MochaFlow — {self.title}")
+        app.title = self.dash_options.get("page_title", f"PourOver — {self.title}")
 
         preview_height = self.dash_options.get("preview_height", "70vh")
         tabs = self.dash_options.get("tabs", ["Report", "Markdown", "HTML", "PDF"])

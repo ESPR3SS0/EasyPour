@@ -1,4 +1,4 @@
-"""Advanced end-to-end MochaFlow example with references and interactive figures.
+"""Advanced end-to-end PourOver example with references and interactive figures.
 
 Usage:
   python examples/playbook/advanced_full.py           # write Markdown + PDF (IEEE template)
@@ -13,11 +13,11 @@ import pathlib
 import sys
 from typing import Optional
 
-from mochaflow import Report, Table
-from mochaflow.ieee import IEEETemplate
+from pourover import Report, Table
+from pourover.ieee import IEEETemplate
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-if (ROOT / "mochaflow").exists() and str(ROOT) not in sys.path:
+if (ROOT / "pourover").exists() and str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
@@ -39,7 +39,7 @@ def _make_wave_plot(freq: float, title: str):
 
 
 def build_report() -> Report:
-    rpt = Report("Edge Forecast Deep Dive", author="MochaFlow Labs", meta={"figure_prefix": "Fig.", "table_prefix": "Table"})
+    rpt = Report("Edge Forecast Deep Dive", author="PourOver Labs", meta={"figure_prefix": "Fig.", "table_prefix": "Table"})
     rpt.add_reference("smith19", "J. Smith et al., 'Neural Widgets', IEEE, 2019.")
     rpt.add_reference("lee22", "A. Lee, 'Optimizing Edge Pipelines', Proc. IEEE, 2022.")
 
@@ -75,7 +75,7 @@ def build_report() -> Report:
             break
         fig_sec.add_matplotlib(
             fig,
-            out_dir=".mochaflow_figs",
+            out_dir=".pourover_figs",
             filename=f"advanced_freq_{freq}.png",
             caption=f"Response curve for frequency {freq}.",
             width="78%",
@@ -115,7 +115,7 @@ def _preview_streamlit(report: Report) -> None:
     except Exception as exc:
         raise RuntimeError("Streamlit preview requested but Streamlit is not installed.") from exc
 
-    st.set_page_config(page_title=f"MochaFlow — {report.title}", layout="wide")
+    st.set_page_config(page_title=f"PourOver — {report.title}", layout="wide")
     report.show_streamlit(height=560)
 
 
@@ -130,7 +130,7 @@ def _preview_dash(report: Report) -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Advanced MochaFlow workflow example.")
+    parser = argparse.ArgumentParser(description="Advanced PourOver workflow example.")
     parser.add_argument("--preview", choices=["streamlit", "dash"], help="Preview the report instead of exiting.")
     args = parser.parse_args()
 

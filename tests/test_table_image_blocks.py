@@ -1,5 +1,5 @@
 # tests/test_table_image_blocks.py
-from mochaflow import Table, Image, Section
+from pourover import Table, Image, Section
 
 def test_table_markdown():
     t = Table(headers=["A", "B"], rows=[[1, 2], [3, 4]])

@@ -4,13 +4,13 @@ title: CLI
 
 # Command Line Interface
 
-MochaFlow includes a simple CLI module that can:
+PourOver includes a simple CLI module that can:
 - Convert an existing Markdown file to HTML or PDF (PDF requires the `weasy` extra)
 - Run a Python “builder” module that returns a `Report` (or Markdown string) and write outputs
 
 Invocation
 ```bash
-python -m mochaflow.cli [--from-md PATH | --builder PATH] [--md OUT.md] [--html OUT.html] [--pdf OUT.pdf]
+python -m pourover.cli [--from-md PATH | --builder PATH] [--md OUT.md] [--html OUT.html] [--pdf OUT.pdf]
 ```
 
 Flags
@@ -27,18 +27,18 @@ Mutually Exclusive
 Examples
 Convert Markdown to HTML
 ```bash
-python -m mochaflow.cli --from-md report.md --html report.html
+python -m pourover.cli --from-md report.md --html report.html
 ```
 
-Convert Markdown to PDF (requires `pip install "MochaFlow[weasy]"`)
+Convert Markdown to PDF (requires `pip install "PourOver[weasy]"`)
 ```bash
-python -m mochaflow.cli --from-md report.md --pdf report.pdf
+python -m pourover.cli --from-md report.md --pdf report.pdf
 ```
 
 Run a Python builder
 ```python
 # builder.py
-from mochaflow import Report
+from pourover import Report
 def build_report():
     r = Report("CLI Report", author="You")
     r.add_section("Hello").add_text("This was generated via the CLI.")
@@ -47,14 +47,14 @@ def build_report():
 
 ```bash
 # Markdown
-python -m mochaflow.cli --builder builder.py --md out.md
+python -m pourover.cli --builder builder.py --md out.md
 # HTML
-python -m mochaflow.cli --builder builder.py --html out.html
+python -m pourover.cli --builder builder.py --html out.html
 # PDF
-python -m mochaflow.cli --builder builder.py --pdf out.pdf
+python -m pourover.cli --builder builder.py --pdf out.pdf
 ```
 
 Notes
 - The CLI prefers Cyclopts if installed, but falls back to a tiny internal parser to remain dependency-light.
-- Plain-Markdown PDFs rely on WeasyPrint; install via `pip install "MochaFlow[weasy]"` (builder PDFs continue to use ReportLab).
+- Plain-Markdown PDFs rely on WeasyPrint; install via `pip install "PourOver[weasy]"` (builder PDFs continue to use ReportLab).
 - Ensure images referenced by Markdown are accessible on disk when generating HTML/PDF.

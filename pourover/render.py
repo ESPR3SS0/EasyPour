@@ -684,7 +684,7 @@ def markdown_to_pdf(
         from weasyprint import HTML  # type: ignore
     except Exception as exc:  # pragma: no cover - dependency missing
         raise ImportError(
-            "WeasyPrint is required for markdown_to_pdf(); install MochaFlow[weasy] or pip install weasyprint."
+            "WeasyPrint is required for markdown_to_pdf(); install PourOver[weasy] or pip install weasyprint."
         ) from exc
     out = Path(output)
     HTML(string=html).write_pdf(str(out))

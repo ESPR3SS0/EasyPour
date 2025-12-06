@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-"""Public API exports for MochaFlow.
+"""Public API exports for PourOver.
 
 Supports both legacy short helper names (b/i/u/link) and the newer explicit
 names (bold/italic/underline/url) depending on what the core module provides.
 """
 
-# file: mochaflow/__init__.py
+# file: pourover/__init__.py
 from .render import markdown_to_html, markdown_to_pdf
 from .ieee import IEEETemplate
 

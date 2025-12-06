@@ -1,4 +1,4 @@
-"""Streamlit time‑series interactive plots demo for MochaFlow.
+"""Streamlit time‑series interactive plots demo for PourOver.
 
 Run:
   streamlit run examples/streamlit/time_series_sliders.py
@@ -10,10 +10,10 @@ from __future__ import annotations
 import pathlib, sys
 
 _ROOT = pathlib.Path(__file__).resolve().parents[2]
-if (_ROOT / "mochaflow").exists() and str(_ROOT) not in sys.path:
+if (_ROOT / "pourover").exists() and str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from mochaflow.core import Report
+from pourover.core import Report
 
 
 def _make_ts(n: int = 80):
@@ -61,7 +61,7 @@ def build_report() -> Report:
     if fig_a is not None:
         sec_a.add_matplotlib(
             fig_a,
-            out_dir=".mochaflow_figs",
+            out_dir=".pourover_figs",
             filename="series_a.png",
             caption="Series A (slow trend).",
             width="70%",
@@ -74,7 +74,7 @@ def build_report() -> Report:
     if fig_b is not None:
         sec_b.add_matplotlib(
             fig_b,
-            out_dir=".mochaflow_figs",
+            out_dir=".pourover_figs",
             filename="series_b.png",
             caption="Series B (steeper trend).",
             width="70%",

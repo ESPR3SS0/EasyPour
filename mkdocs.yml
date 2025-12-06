@@ -1,6 +1,6 @@
-site_name: MochaFlow
+site_name: PourOver
 site_description: Markdown reports from Python objects to HTML and PDF
-site_author: MochaFlow contributors
+site_author: PourOver contributors
 
 theme:
   name: material
