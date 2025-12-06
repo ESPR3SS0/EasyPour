@@ -18,7 +18,7 @@ We also cite [@foo2020] and mark a footnote[^n1].
 
 ## Experiments
 
-<figure>![dot](/home/brew/ghPackages/PourOver/examples/assets/tiny.png)<figcaption>A dot {#fig:dot}</figcaption></figure>
+<figure>![dot](../assets/tiny.png)<figcaption>A dot {#fig:dot}</figcaption></figure>
 
 | Metric | Value |
 | --- | --- |
