@@ -1,6 +1,6 @@
-site_name: PourOver
+site_name: EasyPour
 site_description: Markdown reports from Python objects to HTML and PDF
-site_author: PourOver contributors
+site_author: EasyPour contributors
 
 theme:
   name: material

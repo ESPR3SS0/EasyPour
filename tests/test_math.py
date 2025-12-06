@@ -1,6 +1,6 @@
 import pytest
 
-from pourover import Report, tex_to_png
+from easypour import Report, tex_to_png
 
 
 def _require_matplotlib():

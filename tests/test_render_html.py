@@ -1,6 +1,6 @@
 # tests/test_render_html.py
 import re
-from pourover import markdown_to_html
+from easypour import markdown_to_html
 
 def test_markdown_to_html_contains_inline_css_and_body():
     md = "# Title\n\nParagraph\n\n|A|B|\n|---|---|\n|1|2|\n"

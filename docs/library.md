@@ -23,7 +23,7 @@ Core Types
     - `add_checklist(items: Iterable[tuple[str, bool]])`
     - `add_codeblock(code_text: str, language: str | None = None)` (handles backticks inside code)
     - `add_strikethrough(text: str)`
-    - `add_math(formula, out_dir=".pourover_math", dpi=220, caption=None, width=None, alt=None)`
+    - `add_math(formula, out_dir=".easypour_math", dpi=220, caption=None, width=None, alt=None)`
     - `add_matplotlib(obj, out_dir=None, filename=None, alt='', caption=None, width=None, dpi=180, interactive=False, label=None, numbered=True)`
       - Saves a PNG for Markdown/PDF; with `interactive=True` (and Plotly installed) the same figure becomes an interactive chart inside Streamlit/Dash automatically.
 - `Table(headers: list[str], rows: list[list[str|int|float]])`
@@ -45,7 +45,7 @@ Rendering Helpers
   - `extra_css` is appended to the default stylesheet
 - `Report.write_pdf(path, template=None) -> str`
   - ReportLab renderer operating on the structured `Report`
-  - Pass a custom `PDFTemplate` (from `pourover.render`) to tweak fonts, margins, or colors
+  - Pass a custom `PDFTemplate` (from `easypour.render`) to tweak fonts, margins, or colors
 - `tex_to_png(formula, out_dir, dpi=220) -> Path`
   - Lazily import the math renderer (matplotlib mathtext) to convert TeX-like strings into tightly cropped PNGs
 - `Report.add_reference(key, entry)`, `Report.cite(key) -> str`, `Report.ensure_references_section(title="References")`
@@ -78,7 +78,7 @@ Streamlit Customization
 
 Example: customize sidebar and tabs
 ```python
-from pourover import Report
+from easypour import Report
 
 def sidebar(st, report):
     st.checkbox("Extra toggle", key="extra")
@@ -101,11 +101,11 @@ Levels and Nesting
 
 Matplotlib Convenience
 - `Section.add_matplotlib(fig_or_axes, ...)` saves a PNG and adds as an `Image` block.
-- Defaults to a local directory `.pourover_figs/` if `out_dir` is not provided.
+- Defaults to a local directory `.easypour_figs/` if `out_dir` is not provided.
 
 Example
 ```python
-from pourover import Report, Table, Image, bold, code
+from easypour import Report, Table, Image, bold, code
 
 r = Report("Demo", author="You")
 r.add_section("Summary").add_text(

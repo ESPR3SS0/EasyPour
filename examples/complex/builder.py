@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pourover.core import Report, Image
+from easypour.core import Report, Image
 
 
 def build_report(img_path: str | None = None) -> Report:

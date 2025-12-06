@@ -4,7 +4,7 @@ title: Streamlit Customization
 
 # Streamlit Customization
 
-PourOver lets you customize Streamlit previews in two ways:
+EasyPour lets you customize Streamlit previews in two ways:
 
 - Via `Report` APIs (options, hooks, and custom renderers)
 - By directly using `report.st` (the Streamlit module instance) after calling `show_streamlit()`
@@ -14,10 +14,10 @@ Install extras: `pip install streamlit`
 ## Configure Options
 
 ```python
-from pourover import Report
+from easypour import Report
 
 report = Report("Config Demo").configure_streamlit(
-    page_title="PourOver — Config Demo",
+    page_title="EasyPour — Config Demo",
     layout="wide",        # or "centered"
     height=560,            # HTML tab height
     tabs=["Report", "Markdown", "HTML", "PDF"],  # subset + order
@@ -77,7 +77,7 @@ with st.sidebar:
 
 Notes
 - Hooks are best for predictable placement; direct `st` calls work for one‑offs.
-- If a hook raises an exception, PourOver continues rendering (and logs a gentle warning in the UI).
+- If a hook raises an exception, EasyPour continues rendering (and logs a gentle warning in the UI).
 
 ## Streamlit Theming (CSS injection)
 
@@ -95,7 +95,7 @@ report.set_streamlit_theme(
 report.show_streamlit()
 ```
 
-For full control, pass `css="..."` with your own `<style>` rules — PourOver injects them safely after computed rules.
+For full control, pass `css="..."` with your own `<style>` rules — EasyPour injects them safely after computed rules.
 
 ---
 
@@ -106,7 +106,7 @@ Install extras: `pip install dash`
 You can theme Dash apps by attaching external stylesheets (e.g., Bootstrap) or injecting raw CSS.
 
 ```python
-from pourover import Report
+from easypour import Report
 
 r = Report("Dash Themed")
 

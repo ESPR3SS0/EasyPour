@@ -1,4 +1,4 @@
-"""Streamlit + Matplotlib example for PourOver.
+"""Streamlit + Matplotlib example for EasyPour.
 
 Run:
   streamlit run examples/streamlit/matplotlib_app.py
@@ -9,13 +9,13 @@ import pathlib, sys
 
 # Prefer the local repository package when running examples from source
 _ROOT = pathlib.Path(__file__).resolve().parents[2]
-if (_ROOT / "pourover").exists() and str(_ROOT) not in sys.path:
+if (_ROOT / "easypour").exists() and str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 import streamlit as st
 import matplotlib.pyplot as plt
 
-from pourover.core import Report, Table
+from easypour.core import Report, Table
 
 
 def _make_line_chart():
@@ -39,8 +39,8 @@ def _make_hist():
     return fig
 
 
-st.set_page_config(page_title="PourOver + Streamlit + Matplotlib", layout="wide")
-st.title("PourOver + Streamlit + Matplotlib")
+st.set_page_config(page_title="EasyPour + Streamlit + Matplotlib", layout="wide")
+st.title("EasyPour + Streamlit + Matplotlib")
 
 st.sidebar.header("Options")
 opt_table = st.sidebar.checkbox("Include metrics table", value=True)
@@ -64,9 +64,9 @@ if opt_table:
 
 sec = rpt.add_section("Figures")
 if opt_line:
-    sec.add_matplotlib(_make_line_chart(), out_dir=".pourover_figs", filename="latency.png", caption="Latency over steps", width="60%")
+    sec.add_matplotlib(_make_line_chart(), out_dir=".easypour_figs", filename="latency.png", caption="Latency over steps", width="60%")
 if opt_hist:
-    sec.add_matplotlib(_make_hist(), out_dir=".pourover_figs", filename="hist.png", caption="Distribution", width="60%")
+    sec.add_matplotlib(_make_hist(), out_dir=".easypour_figs", filename="hist.png", caption="Distribution", width="60%")
 
 # Use the built-in preview — the Markdown tab renders with native Streamlit widgets
 rpt.show_streamlit(height=520)

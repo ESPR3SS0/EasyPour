@@ -125,9 +125,9 @@ cython_debug/
 !.pixi/config.toml
 
 # Generated assets from renders
-.pourover_assets/
+.easypour_assets/
 .mdreport_assets/
-.pourover_figs/
+.easypour_figs/
 .manymark_figs/
-.pourover_math/
+.easypour_math/
 .manymark_math/

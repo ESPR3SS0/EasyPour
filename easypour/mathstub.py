@@ -1,4 +1,4 @@
-# pourover/mathstub.py (moved under pourover)
+# easypour/mathstub.py (moved under easypour)
 from __future__ import annotations
 import hashlib, io
 from pathlib import Path

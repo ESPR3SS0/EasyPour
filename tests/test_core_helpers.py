@@ -1,7 +1,7 @@
 # tests/test_core_helpers.py
 from importlib import import_module
 
-core = import_module("pourover.core")
+core = import_module("easypour.core")
 # Support both the new long names and legacy short aliases without eager defaults
 bold = getattr(core, "bold", None) or getattr(core, "b")
 italic = getattr(core, "italic", None) or getattr(core, "i")

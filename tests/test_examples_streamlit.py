@@ -2,7 +2,7 @@ import importlib
 import pathlib
 import pytest
 
-from pourover import markdown_to_html
+from easypour import markdown_to_html
 
 
 def has_streamlit():

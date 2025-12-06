@@ -1,4 +1,4 @@
-"""Streamlit interactive Matplotlib => Plotly demo for PourOver.
+"""Streamlit interactive Matplotlib => Plotly demo for EasyPour.
 
 Run:
   streamlit run examples/streamlit/interactive_plots.py
@@ -9,10 +9,10 @@ import pathlib
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-if (ROOT / "pourover").exists() and str(ROOT) not in sys.path:
+if (ROOT / "easypour").exists() and str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from pourover.core import Report
+from easypour.core import Report
 
 
 def _make_plot(scale: float, title: str):
@@ -47,7 +47,7 @@ def build_report() -> Report:
             continue
         sec.add_matplotlib(
             fig,
-            out_dir=".pourover_figs",
+            out_dir=".easypour_figs",
             filename=f"interactive_{scale:.1f}.png",
             caption=f"{title} — zoom/pan in Streamlit; static in PDF.",
             width="70%",
@@ -63,5 +63,5 @@ if __name__ == "__main__":
     except Exception:
         print(build_report().to_markdown())
     else:
-        st.set_page_config(page_title="PourOver Interactive Figures", layout="wide")
+        st.set_page_config(page_title="EasyPour Interactive Figures", layout="wide")
         build_report().show_streamlit(height=540)

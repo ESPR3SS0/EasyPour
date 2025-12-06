@@ -1,6 +1,6 @@
 import pytest
 
-from pourover.core import Report, Section, Table, TableBlock
+from easypour.core import Report, Section, Table, TableBlock
 
 
 def test_citations_ordering():

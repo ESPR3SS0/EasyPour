@@ -1,5 +1,5 @@
 # tests/test_section_lists_codeblocks.py
-from pourover.core import Section
+from easypour.core import Section
 from importlib import import_module
 
 

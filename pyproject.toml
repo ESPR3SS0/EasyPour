@@ -1,12 +1,15 @@
 [project]
-name = "PourOver"
+name = "EasyPour"
 version = "0.1.0"
 description = "Write markdown report easily! Optionally transform into a PDF, streamlit page, or dash page!"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "ESPR3SS0", email = "98864173+ESPR3SS0@users.noreply.github.com" }]
 license = { file = "LICENSE" }
-dependencies = ["pytest>=9.0.1,<10"]
+dependencies = [
+  "markdown-it-py>=4.0.0,<5",
+  "reportlab>=4.4.4,<5",
+]
 
 # Optional extras to align with pixi toolchain and examples
 [project.optional-dependencies]
@@ -23,11 +26,11 @@ dev = ["pytest>=8.4.2,<9", "ruff>=0.6.0,<0.7"]
 weasy = ["weasyprint>=66.0,<67"]
 
 [project.urls]
-Homepage = "https://github.com/ESPR3SS0/PourOver"
-Repository = "https://github.com/ESPR3SS0/PourOver"
+Homepage = "https://github.com/ESPR3SS0/EasyPour"
+Repository = "https://github.com/ESPR3SS0/EasyPour"
 
 [project.scripts]
-pourover = "pourover.cli:main"
+easypour = "easypour.cli:main"
 
 [build-system]
 requires = ["hatchling>=1.21"]
@@ -35,10 +38,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build]
 include = [
-  "pourover/**/*",
+  "easypour/**/*",
   "README.md",
 ]
-packages = ["pourover"]
+packages = ["easypour"]
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
@@ -49,10 +52,10 @@ platforms = ["linux-64"]
 [tool.pixi.pypi-dependencies]
 weasyprint = ">=66.0,<67"
 ruff = ">=0.6.0,<0.7"
-PourOver = { path = "." }
+EasyPour = { path = "." }
 cyclopts = ">=2.7,<3"
-markdown-it-py= ">=4.0.0,<5"
-reportlab=">=4.4.4,<5"
+#markdown-it-py= ">=4.0.0,<5"
+#reportlab=">=4.4.4,<5"
 
 
 [tool.pixi.dependencies]
@@ -63,6 +66,8 @@ mkdocs = ">=1.6.1,<2"
 matplotlib = ">=3.10.7,<4"
 hatch = ">=1.14.1,<2"
 mkdocs-material = ">=9.6.22,<10"
+twine = ">=6.2.0,<7"
+pytest = ">=9.0.1,<10"
 
 
 

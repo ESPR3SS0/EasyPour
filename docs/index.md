@@ -1,15 +1,15 @@
 ---
-title: PourOver — Markdown Reports to HTML/PDF
+title: EasyPour — Markdown Reports to HTML/PDF
 ---
 
-# PourOver
+# EasyPour
 
 Turn tidy Python objects into Markdown, then to clean HTML and simple PDFs with a tiny, friendly API and a simple CLI.
 
 Highlights
 - Build a `Report` of nested `Section`s with text, `Table`s, and `Image`s.
 - Render Markdown to HTML with tasteful defaults, or to PDF via ReportLab.
-- Use from Python or the command line (`python -m pourover.cli`).
+- Use from Python or the command line (`python -m easypour.cli`).
 
 Features
 - Streamlit integration: `Report.show_streamlit()` with configurable tabs and hooks
@@ -35,7 +35,7 @@ Installation
 
 Minimal Example
 ```python
-from pourover import Report, Table, Image, b, i, code
+from easypour import Report, Table, Image, b, i, code
 
 rpt = Report(title="Weekly Model Analysis", author="ESPR3SS0", meta={"draft": True})
 sec = rpt.add_section("Summary")
@@ -52,12 +52,12 @@ rpt.add_section("Artifacts").add_image(Image("./charts/latency.png", alt="Latenc
 md = rpt.to_markdown()               # Markdown string (with front matter)
 open("report.md", "w").write(md)
 
-from pourover import markdown_to_html
+from easypour import markdown_to_html
 open("report.html", "w").write(markdown_to_html(md, title=rpt.title))
 rpt.write_pdf("report.pdf")
 ```
 
-Why PourOver?
+Why EasyPour?
 - Small surface area, batteries included.
 - Markdown first; HTML/PDF are just a render away.
 - Friendly in scripts, notebooks, and CI.

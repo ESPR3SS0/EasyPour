@@ -1,4 +1,4 @@
-"""Simple end-to-end PourOver example.
+"""Simple end-to-end EasyPour example.
 
 Usage:
   python examples/playbook/simple_full.py           # write Markdown + PDF
@@ -13,10 +13,10 @@ import pathlib
 import sys
 from typing import Optional
 
-from pourover import Report, Table
+from easypour import Report, Table
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-if (ROOT / "pourover").exists() and str(ROOT) not in sys.path:
+if (ROOT / "easypour").exists() and str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
@@ -37,10 +37,10 @@ def _make_plot():
 
 
 def build_report() -> Report:
-    rpt = Report("Quarterly Snapshot", author="PourOver Examples")
+    rpt = Report("Quarterly Snapshot", author="EasyPour Examples")
     summary = rpt.add_section("Summary")
     summary.add_text(
-        "This lightweight report demonstrates the PourOver workflow.",
+        "This lightweight report demonstrates the EasyPour workflow.",
         "We capture a short narrative, a metrics table, and a simple figure.",
     )
 
@@ -61,7 +61,7 @@ def build_report() -> Report:
     if plot is not None:
         rpt.add_section("Figure").add_matplotlib(
             plot,
-            out_dir=".pourover_figs",
+            out_dir=".easypour_figs",
             filename="quarterly_latency.png",
             caption="Latency decreases as tuning iterations progress.",
             width="70%",
@@ -99,7 +99,7 @@ def _preview_streamlit(report: Report) -> None:
     except Exception as exc:  # pragma: no cover - optional dependency
         raise RuntimeError("Streamlit preview requested but Streamlit is not installed.") from exc
 
-    st.set_page_config(page_title=f"PourOver — {report.title}", layout="wide")
+    st.set_page_config(page_title=f"EasyPour — {report.title}", layout="wide")
     report.show_streamlit(height=520)
 
 
@@ -114,7 +114,7 @@ def _preview_dash(report: Report) -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Simple PourOver workflow example.")
+    parser = argparse.ArgumentParser(description="Simple EasyPour workflow example.")
     parser.add_argument("--preview", choices=["streamlit", "dash"], help="Preview the report instead of exiting.")
     args = parser.parse_args()
 

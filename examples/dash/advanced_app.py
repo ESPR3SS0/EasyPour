@@ -1,4 +1,4 @@
-"""Advanced Dash example for PourOver.
+"""Advanced Dash example for EasyPour.
 
 Run:
   python examples/dash/advanced_app.py
@@ -7,7 +7,7 @@ Open http://127.0.0.1:8050/ in your browser.
 
 Features
 - Controls: include table, include plot, slider for slope m
-- Builds a PourOver Report and renders HTML in an iframe
+- Builds a EasyPour Report and renders HTML in an iframe
 - Shows Markdown in a code block
 - Download buttons for Markdown and HTML via dcc.Download
 """
@@ -24,11 +24,11 @@ from dash import Dash, dcc, html, Input, Output, State
 
 # Prefer the local repository package when running examples from source
 _ROOT = pathlib.Path(__file__).resolve().parents[2]
-if (_ROOT / "pourover").exists() and str(_ROOT) not in sys.path:
+if (_ROOT / "easypour").exists() and str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from pourover.core import Report, Table
-from pourover import markdown_to_html
+from easypour.core import Report, Table
+from easypour import markdown_to_html
 
 
 def _make_plot_png_bytes(m: float) -> Optional[bytes]:
@@ -98,11 +98,11 @@ def build_report(include_table: bool, include_plot: bool, m: float) -> tuple[Rep
 
 
 app = Dash(__name__)
-app.title = "PourOver + Dash (Advanced)"
+app.title = "EasyPour + Dash (Advanced)"
 
 app.layout = html.Div(
     [
-        html.H1("PourOver + Dash (Advanced)"),
+        html.H1("EasyPour + Dash (Advanced)"),
         html.Div(
             [
                 html.Div(

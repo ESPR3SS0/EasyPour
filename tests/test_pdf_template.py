@@ -1,5 +1,5 @@
-from pourover.render import PDFTemplate, _heading
-from pourover.ieee import IEEETemplate
+from easypour.render import PDFTemplate, _heading
+from easypour.ieee import IEEETemplate
 
 
 def test_register_layout_invoked():

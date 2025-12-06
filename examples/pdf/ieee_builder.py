@@ -18,8 +18,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from pourover import Report, Table
-from pourover.ieee import IEEETemplate
+from easypour import Report, Table
+from easypour.ieee import IEEETemplate
 
 
 def _ensure_asset() -> pathlib.Path:
@@ -43,7 +43,7 @@ def build_report(asset_path: pathlib.Path) -> Report:
 
     abstract = rpt.add_section("Abstract")
     abstract.add_text(
-        "This sample demonstrates PourOver's two-column PDF capabilities. "
+        "This sample demonstrates EasyPour's two-column PDF capabilities. "
         "It includes figures, tables, references, and citations."
     )
 
@@ -56,7 +56,7 @@ def build_report(asset_path: pathlib.Path) -> Report:
     method = rpt.add_section("II. Methodology")
     method.add_text(
         "We generate Markdown first, then convert it to a structured PDF using "
-        "PourOver's `Report.write_pdf()` and `IEEETemplate`."
+        "EasyPour's `Report.write_pdf()` and `IEEETemplate`."
     )
     method.add_figure(asset_path, caption="Latency trend for the proposed system.", label="fig:latency", width="70%")
 

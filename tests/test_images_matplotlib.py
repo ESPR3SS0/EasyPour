@@ -1,7 +1,7 @@
 import pathlib
 import pytest
 
-from pourover.core import Report, Section
+from easypour.core import Report, Section
 
 # Skip this module if matplotlib is not available
 try:

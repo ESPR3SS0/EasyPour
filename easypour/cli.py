@@ -1,10 +1,10 @@
-"""Cyclopts-based CLI for PourOver.
+"""Cyclopts-based CLI for EasyPour.
 
 Falls back to a tiny internal parser if Cyclopts is unavailable, so tests and
 basic usage still work without extra installs.
 """
 
-# file: pourover/cli.py
+# file: easypour/cli.py
 import importlib.util
 import pathlib
 import sys
@@ -75,7 +75,7 @@ def _run(
                 markdown_to_pdf(md_text, str(pdf), title=title_hint or "Report")
             except ImportError:
                 print(
-                    "PDF output from Markdown requires WeasyPrint; install PourOver[weasy] or pip install weasyprint.",
+                    "PDF output from Markdown requires WeasyPrint; install EasyPour[weasy] or pip install weasyprint.",
                     file=sys.stderr,
                 )
                 return 2
@@ -110,7 +110,7 @@ def main():
     try:
         from cyclopts import App  # type: ignore
 
-        app = App(name="pourover", help="Build Markdown/HTML/PDF reports.")
+        app = App(name="easypour", help="Build Markdown/HTML/PDF reports.")
 
         @app.default
         def build(

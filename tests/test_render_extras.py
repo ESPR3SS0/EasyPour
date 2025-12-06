@@ -1,6 +1,6 @@
 # tests/test_render_extras.py
 import re
-from pourover import markdown_to_html
+from easypour import markdown_to_html
 
 
 def test_markdown_to_html_with_extra_css_and_text_url():

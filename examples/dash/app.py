@@ -1,4 +1,4 @@
-"""Dash example for PourOver.
+"""Dash example for EasyPour.
 
 Run:
   python examples/dash/app.py
@@ -11,10 +11,10 @@ import pathlib, sys
 
 # Prefer the local repository package when running examples from source
 _ROOT = pathlib.Path(__file__).resolve().parents[2]
-if (_ROOT / "pourover").exists() and str(_ROOT) not in sys.path:
+if (_ROOT / "easypour").exists() and str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from pourover.core import Report, Table
+from easypour.core import Report, Table
 
 
 def _make_demo_plot():
@@ -52,7 +52,7 @@ def build_report(include_table: bool, include_interactive: bool = False) -> Repo
         if fig is not None:
             rpt.add_section("Interactive Plot").add_matplotlib(
                 fig,
-                out_dir=".pourover_figs",
+                out_dir=".easypour_figs",
                 filename="dash_interactive.png",
                 caption="Zoom/pan in Dash; rendered as PNG in Markdown/PDF.",
                 width="65%",

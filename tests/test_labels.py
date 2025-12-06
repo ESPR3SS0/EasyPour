@@ -1,5 +1,5 @@
-from pourover import Report
-from pourover.core import Image, Table, FigureBlock, InteractiveFigure
+from easypour import Report
+from easypour.core import Image, Table, FigureBlock, InteractiveFigure
 
 
 def test_label_references_markdown():

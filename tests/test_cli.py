@@ -15,8 +15,8 @@ def test_cli_from_md_to_html(tmp_path):
     html_path = tmp_path / "r.html"
     md_path.write_text("# T\n\nHi\n", encoding="utf-8")
 
-    # python -m pourover.cli --from-md ... --html ...
-    cmd = [PYTHON, "-m", "pourover.cli", "--from-md", str(md_path), "--html", str(html_path)]
+    # python -m easypour.cli --from-md ... --html ...
+    cmd = [PYTHON, "-m", "easypour.cli", "--from-md", str(md_path), "--html", str(html_path)]
     res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     assert res.returncode == 0, res.stderr
     assert html_path.exists()
@@ -26,14 +26,14 @@ def test_cli_with_builder_outputs_md(tmp_path):
     builder = tmp_path / "builder.py"
     out_md = tmp_path / "out.md"
     builder.write_text(textwrap.dedent("""
-        from pourover import Report
+        from easypour import Report
         def build_report():
             rpt = Report("CLI Report", author="You")
             rpt.add_section("S").add_text("Hello")
             return rpt
     """), encoding="utf-8")
 
-    cmd = [PYTHON, "-m", "pourover.cli", "--builder", str(builder), "--md", str(out_md)]
+    cmd = [PYTHON, "-m", "easypour.cli", "--builder", str(builder), "--md", str(out_md)]
     res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     assert res.returncode == 0, res.stderr
     assert out_md.exists()
@@ -48,7 +48,7 @@ def test_cli_from_md_to_pdf(tmp_path, ensure_weasy_capability):
     md_path = tmp_path / "r.md"
     pdf_path = tmp_path / "r.pdf"
     md_path.write_text("# PDF\n\n**ok**\n", encoding="utf-8")
-    cmd = [PYTHON, "-m", "pourover.cli", "--from-md", str(md_path), "--pdf", str(pdf_path)]
+    cmd = [PYTHON, "-m", "easypour.cli", "--from-md", str(md_path), "--pdf", str(pdf_path)]
     res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     assert res.returncode == 0, res.stderr
     assert pdf_path.exists()

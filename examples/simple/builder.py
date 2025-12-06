@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pourover import Report, Table
+from easypour import Report, Table
 
 
 def build_report() -> Report:
