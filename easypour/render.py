@@ -10,6 +10,8 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     BaseDocTemplate,
     Flowable,
@@ -87,6 +89,11 @@ class PDFTemplate:
     table_prefix: str = "Table"
     section_spacing: float = 0.35
     custom_layouts: Dict[str, Callable[["PDFTemplate"], List[Frame]]] = field(default_factory=dict)
+    autoscale_images: bool = True
+    autoscale_tables: bool = True
+    font_files: Dict[str, str] = field(default_factory=dict)
+    _registered_fonts: Dict[str, str] = field(default_factory=dict, init=False, repr=False)
+    _font_aliases: Dict[str, str] = field(default_factory=dict, init=False, repr=False)
 
     font: str = "Helvetica"
     font_bold: str = "Helvetica-Bold"
@@ -116,6 +123,72 @@ class PDFTemplate:
     ) -> "PDFTemplate":
         self.custom_layouts[name.lower()] = builder
         return self
+
+    def register_font_file(self, font_name: str, path: str | Path) -> "PDFTemplate":
+        self.font_files[str(font_name)] = str(Path(path).expanduser())
+        return self
+
+    def _register_font_path(self, desired_name: str, font_path: Path) -> str:
+        attempt = 0
+        normalized_path = str(font_path.expanduser())
+        while True:
+            candidate = desired_name if attempt == 0 else f"{desired_name}_{attempt}"
+            existing = self._registered_fonts.get(candidate)
+            if existing == normalized_path:
+                return candidate
+            if existing is None:
+                try:
+                    pdfmetrics.getFont(candidate)
+                except KeyError:
+                    try:
+                        pdfmetrics.registerFont(TTFont(candidate, normalized_path))
+                    except Exception as exc:
+                        raise RuntimeError(f"Failed to register font '{candidate}' from {normalized_path}: {exc}") from exc
+                    self._registered_fonts[candidate] = normalized_path
+                    return candidate
+                attempt += 1
+                continue
+            attempt += 1
+
+    def _resolve_font(self, font_value: Optional[str]) -> Optional[str]:
+        if font_value is None:
+            return None
+        key = str(font_value)
+        cached = self._font_aliases.get(key)
+        if cached:
+            return cached
+        font_path: Optional[Path] = None
+        font_name = key
+        if key in self.font_files:
+            font_path = Path(self.font_files[key])
+        else:
+            candidate = Path(key).expanduser()
+            if candidate.suffix.lower() in {".ttf", ".otf", ".ttc"} and candidate.is_file():
+                font_path = candidate
+                font_name = candidate.stem
+        if font_path:
+            resolved = self._register_font_path(font_name, font_path)
+            self._font_aliases[key] = resolved
+            return resolved
+        return font_name
+
+    def _normalize_font_style(self, style: Optional[Dict[str, Any]]) -> None:
+        if not style:
+            return
+        for field_name in ("font", "font_name"):
+            if style.get(field_name):
+                style[field_name] = self._resolve_font(style[field_name])
+
+    def _prepare_fonts(self) -> None:
+        for attr in ("font", "font_bold", "mono_font"):
+            resolved = self._resolve_font(getattr(self, attr, None))
+            if resolved:
+                setattr(self, attr, resolved)
+        self._normalize_font_style(self.paragraph_overrides)
+        for overrides in self.heading_overrides.values():
+            self._normalize_font_style(overrides)
+        self._normalize_font_style(self.figure_caption_style)
+        self._normalize_font_style(self.table_caption_style)
 
     def _single_frames(self) -> List[Frame]:
         width, height = self._page_size_tuple()
@@ -172,6 +245,29 @@ class PDFTemplate:
         if builder:
             return builder(self)
         return None
+
+    def frame_bounds(self) -> Tuple[float, float]:
+        """Return conservative width/height bounds for the active layout."""
+        layouts: List[str] = []
+        layout_name = (self.layout or "single").lower()
+        layouts.append(layout_name)
+        if self.first_page_layout:
+            layouts.append(self.first_page_layout.lower())
+        widths: List[float] = []
+        heights: List[float] = []
+        for name in dict.fromkeys(layouts):
+            frames = self._frames_for_layout(name)
+            if frames:
+                for frame in frames:
+                    widths.append(float(getattr(frame, "_width", frame.width)))
+                    heights.append(float(getattr(frame, "_height", frame.height)))
+        if widths and heights:
+            return min(widths), min(heights)
+        width, height = self._page_size_tuple()
+        return (
+            width - self.margin_left - self.margin_right,
+            height - self.margin_top - self.margin_bottom,
+        )
 
     def make_document(
         self,
@@ -249,6 +345,7 @@ def _paragraph_style(
     if overrides:
         merged.update(overrides)
     font_name = merged.get("font") or merged.get("font_name") or base_font or template.font
+    font_name = template._resolve_font(font_name) or template.font
     size = merged.get("font_size") or font_size or template.base_font_size
     leading = merged.get("leading") or (size * template.line_spacing)
     alignment_name = str(merged.get("alignment", "left")).lower()
@@ -319,17 +416,19 @@ def _heading(text: str, level: int, template: PDFTemplate, overrides: Optional[D
     return Paragraph(_inline_to_html(text, template), style)
 
 
-def _table(block: CoreTable, template: PDFTemplate) -> RLTable:
+def _table(block: CoreTable, template: PDFTemplate) -> Flowable:
     data = [block.headers] + block.rows
     style_opts = block.pdf_style or {}
     col_widths = style_opts.get("col_widths")
     row_heights = style_opts.get("row_heights")
     table = RLTable(data, colWidths=col_widths, rowHeights=row_heights, repeatRows=1)
+    header_font = template._resolve_font(style_opts.get("header_font") or template.font_bold) or template.font_bold
+    body_font = template._resolve_font(style_opts.get("body_font") or template.font) or template.font
     base_style = [
         ("BACKGROUND", (0, 0), (-1, 0), _color(style_opts.get("header_bg", template.table_header_bg))),
         ("TEXTCOLOR", (0, 0), (-1, 0), _color(style_opts.get("header_text", template.table_header_text))),
-        ("FONTNAME", (0, 0), (-1, 0), style_opts.get("header_font", template.font_bold)),
-        ("FONTNAME", (0, 1), (-1, -1), style_opts.get("body_font", template.font)),
+        ("FONTNAME", (0, 0), (-1, 0), header_font),
+        ("FONTNAME", (0, 1), (-1, -1), body_font),
         ("FONTSIZE", (0, 0), (-1, -1), style_opts.get("font_size", template.base_font_size)),
         ("ALIGN", (0, 0), (-1, -1), style_opts.get("align", "LEFT")),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
@@ -338,21 +437,99 @@ def _table(block: CoreTable, template: PDFTemplate) -> RLTable:
     if "style" in style_opts:
         base_style.extend(style_opts["style"])
     table.setStyle(TableStyle(base_style))
+    if template.autoscale_tables:
+        max_w, max_h = template.frame_bounds()
+        max_width = float(max_w) if max_w and max_w > 0 else 1.0
+        max_height = float(max_h) if max_h and max_h > 0 else 1.0
+        # Shrink tables only when they would otherwise overflow the active frame(s).
+        return KeepInFrame(max_width, max_height, [table], mode="shrink", mergeSpace=True)
     return table
+
+
+def _parse_dimension(value: Any, template: PDFTemplate, axis: str) -> Optional[float]:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        cleaned = value.strip().lower()
+        if cleaned.endswith("px"):
+            try:
+                return float(cleaned[:-2])
+            except ValueError:
+                return None
+        if cleaned.endswith("%"):
+            try:
+                pct = float(cleaned[:-1]) / 100.0
+            except ValueError:
+                return None
+            max_w, max_h = template.frame_bounds()
+            base = max_w if axis == "width" else max_h
+            return base * pct
+    return None
+
+
+def _image_size_from_hints(
+    path: str,
+    template: PDFTemplate,
+    *,
+    width_hint: Any = None,
+    height_hint: Any = None,
+) -> tuple[float, float]:
+    reader = ImageReader(path)
+    orig_w, orig_h = reader.getSize()
+    orig_w = max(float(orig_w), 1.0)
+    orig_h = max(float(orig_h), 1.0)
+    width = _parse_dimension(width_hint, template, axis="width")
+    height = _parse_dimension(height_hint, template, axis="height")
+    if width is None and height is None:
+        width = orig_w
+        height = orig_h
+    elif width is None and height is not None:
+        height = float(height)
+        width = orig_w * (height / orig_h if orig_h else 1.0)
+    elif height is None and width is not None:
+        width = float(width)
+        height = orig_h * (width / orig_w if orig_w else 1.0)
+    else:
+        width = float(width)
+        height = float(height)
+
+    if width <= 0 and height <= 0:
+        width = orig_w
+        height = orig_h
+    else:
+        if width <= 0 and height > 0:
+            width = orig_w * (height / orig_h if orig_h else 1.0)
+        if height <= 0 and width > 0:
+            height = orig_h * (width / orig_w if orig_w else 1.0)
+    if width <= 0:
+        width = orig_w
+    if height <= 0:
+        height = orig_h
+
+    if template.autoscale_images and width > 0 and height > 0:
+        max_w, max_h = template.frame_bounds()
+        scale = min(max_w / width if max_w else 1.0, max_h / height if max_h else 1.0, 1.0)
+        if scale < 1.0:
+            width *= scale
+            height *= scale
+    return width, height
 
 
 def _image(block: CoreImage, template: PDFTemplate, *, include_caption: bool = True) -> List[Any]:
     flowables: List[Any] = []
-    path = block.path
-    width = block.pdf_style.get("width") if block.pdf_style else None
-    height = block.pdf_style.get("height") if block.pdf_style else None
-    if width is None and isinstance(block.width, int):
-        width = block.width
-    img = RLImage(path, width=width, height=height)
+    style = block.pdf_style or {}
+    width_hint = style.get("width")
+    if width_hint is None:
+        width_hint = block.width
+    height_hint = style.get("height")
+    width, height = _image_size_from_hints(block.path, template, width_hint=width_hint, height_hint=height_hint)
+    img = RLImage(block.path, width=width, height=height)
     flowables.append(img)
     if include_caption and block.caption:
         flowables.append(Spacer(1, template.base_font_size * 0.2))
-        cap_style = block.pdf_style.get("caption_style") if block.pdf_style else {"font_size": template.base_font_size - 1, "color": colors.grey}
+        cap_style = style.get("caption_style") if style else {"font_size": template.base_font_size - 1, "color": colors.grey}
         flowables.append(_paragraph(block.caption, template, overrides=cap_style))
     return flowables
 
@@ -384,7 +561,13 @@ class _AbsoluteImageFlowable(Flowable):
 
 
 def _floating_image(block: FloatingImageDirective, template: PDFTemplate) -> List[Any]:
-    img = RLImage(block.path, width=block.width, height=block.height)
+    width, height = _image_size_from_hints(
+        block.path,
+        template,
+        width_hint=block.width,
+        height_hint=block.height,
+    )
+    img = RLImage(block.path, width=width, height=height)
     align = block.align.lower()
     if align == "right":
         img.hAlign = "RIGHT"
@@ -623,6 +806,7 @@ def _on_page(template: PDFTemplate) -> Callable[[canvas.Canvas, Any], None]:
 
 def report_to_pdf(rpt: Report, out_pdf_path: str, template: Optional[PDFTemplate] = None) -> str:
     template = template or PDFTemplate()
+    template._prepare_fonts()
     if template.footer_fn is None:
         template.footer_fn = _default_footer
     numbering = _NumberingState()

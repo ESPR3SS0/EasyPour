@@ -620,12 +620,17 @@ class Report:
         - font, font_bold, mono_font, base_font_size, h1, h2, h3, line_spacing
         - header_fn / footer_fn: callables with signature (canvas, template, page_num)
         - figure_caption_style / table_caption_style: dicts merged into caption styles
+        - autoscale_images / autoscale_tables: toggle automatic sizing safeguards
         """
 
         for key, value in options.items():
             if key in {"figure_caption_style", "table_caption_style"} and isinstance(value, dict):
                 merged = dict(self.pdf_template_options.get(key, {}))
                 merged.update(value)
+                self.pdf_template_options[key] = merged
+            elif key == "font_files" and isinstance(value, dict):
+                merged = dict(self.pdf_template_options.get(key, {}))
+                merged.update({str(k): str(v) for k, v in value.items()})
                 self.pdf_template_options[key] = merged
             elif key == "margins":
                 self.pdf_template_options[key] = tuple(value)  # type: ignore[arg-type]
@@ -695,10 +700,20 @@ class Report:
             "line_spacing",
             "header_fn",
             "footer_fn",
+            "autoscale_images",
+            "autoscale_tables",
         }
         for attr in direct_attrs:
             if attr in overrides:
                 assign(attr, overrides[attr])
+
+        if "font_files" in overrides:
+            for name, path in dict(overrides["font_files"]).items():
+                normalized = str(Path(path))
+                current = template.font_files.get(name)
+                if user_template and current and current != normalized:
+                    warn_override(f"font_files[{name!r}]", current, normalized)
+                template.font_files[name] = normalized
 
         for style_key in ("figure_caption_style", "table_caption_style"):
             if style_key in overrides:
