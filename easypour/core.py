@@ -1,35 +1,33 @@
-# file: easypour/core.py
+"""Core data structures and helpers for building EasyPour reports."""
+
 from __future__ import annotations
 
+import base64
+import hashlib
+import mimetypes
+import re
+import unicodedata
+import warnings
+from collections.abc import Callable, Iterable
+from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
-import base64
-import mimetypes
 from typing import (
+    TYPE_CHECKING,
     Any,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    Optional,
     Protocol,
     Union,
     runtime_checkable,
 )
-import unicodedata
-import re
-import hashlib
-import warnings
-from typing import TYPE_CHECKING
 
 from .pdfmixins import (
+    AbsoluteImageDirective,
+    DoubleSpaceDirective,
+    FloatingImageDirective,
     FlowableDirective,
     TwoColumnDirective,
-    AbsoluteImageDirective,
-    FloatingImageDirective,
     VerticalSpaceDirective,
-    DoubleSpaceDirective,
 )
 
 if TYPE_CHECKING:  # pragma: no cover - only for typing
@@ -39,25 +37,32 @@ if TYPE_CHECKING:  # pragma: no cover - only for typing
 # Inline helpers (portable Markdown-first)
 # =========================================================
 
+
 def bold(text: str) -> str:
+    """Wrap text in Markdown bold markers."""
     return f"**{text}**"
 
 
 def italic(text: str) -> str:
+    """Wrap text in Markdown italics markers."""
     return f"*{text}*"
 
 
 # Markdown has no native underline; use HTML <u> for terminal/Obsidian tolerance
 
+
 def underline(text: str) -> str:
+    """Wrap text in Markdown underline HTML."""
     return f"<u>{text}</u>"
 
 
 def code(text: str) -> str:
+    """Wrap text in Markdown code markers."""
     return f"`{text}`"
 
 
 def url(text: str, url: str) -> str:
+    """Create a Markdown link."""
     return f"[{text}]({url})"
 
 
@@ -66,13 +71,20 @@ def strikethrough(text: str) -> str:
     return f"~~{text}~~"
 
 
+CODE_FENCE_MIN = 3
+
+
 # =========================================================
 # Protocols / Utilities
 # =========================================================
 
+
 @runtime_checkable
 class MarkdownRenderable(Protocol):
-    def to_markdown(self) -> str: ...
+    """Protocol for types that can produce Markdown strings."""
+
+    def to_markdown(self) -> str:
+        """Return a Markdown representation of the object."""
 
 
 def _md_escape_cell(x: Any) -> str:
@@ -92,12 +104,16 @@ def _slug(s: str) -> str:
 # Simple asset manager for relocating images for HTML/PDF renders
 @dataclass
 class AssetManager:
+    """Simple helper to relocate assets (images, figures) for renders."""
+
     base: Path = Path(".easypour_assets")
 
     def __post_init__(self) -> None:
+        """Ensure the asset directory exists."""
         self.base.mkdir(parents=True, exist_ok=True)
 
     def put(self, src: Path | str, name: str | None = None) -> Path:
+        """Copy an asset into the managed directory and return its path."""
         src_p = Path(src)
         dst = self.base / (name or src_p.name)
         try:
@@ -115,20 +131,25 @@ class AssetManager:
 # Blocks
 # =========================================================
 
+
 @dataclass
 class Table:
-    headers: List[str]
-    rows: List[List[Union[str, int, float]]]
-    pdf_style: Dict[str, Any] = field(default_factory=dict)  # placeholder for PDF-specific hints
+    """Structured table data for reports."""
+
+    headers: list[str]
+    rows: list[list[str | int | float]]
+    pdf_style: dict[str, Any] = field(default_factory=dict)  # placeholder for PDF-specific hints
 
     @classmethod
-    def from_dicts(cls, rows: Iterable[Dict[str, Any]]) -> "Table":
+    def from_dicts(cls, rows: Iterable[dict[str, Any]]) -> Table:
+        """Create a table from a sequence of dictionaries."""
         rows_l = list(rows)
         headers = list(rows_l[0].keys()) if rows_l else []
         body = [[row.get(h, "") for h in headers] for row in rows_l]
         return cls(headers, body)
 
     def to_markdown(self) -> str:
+        """Serialize the table as GitHub-Flavored Markdown."""
         if not self.headers:
             return ""
         header = "| " + " | ".join(map(_md_escape_cell, self.headers)) + " |"
@@ -139,17 +160,20 @@ class Table:
 
 @dataclass
 class Image:
+    """Image asset with optional alt/caption/width hints."""
+
     path: str
     alt: str = ""
-    caption: Optional[str] = None
-    width: Optional[Union[int, str]] = None
-    pdf_style: Dict[str, Any] = field(default_factory=dict)
+    caption: str | None = None
+    width: int | str | None = None
+    pdf_style: dict[str, Any] = field(default_factory=dict)
 
     def to_markdown(self) -> str:
+        """Render the image as Markdown/HTML."""
         md = f"![{self.alt}]({self.path})"
         if self.caption or self.width is not None:
             # Use HTML wrapper for width/caption while keeping MD-compatible core
-            width_attr: Optional[str] = None
+            width_attr: str | None = None
             if isinstance(self.width, int):
                 width_attr = f"{self.width}px"
             elif isinstance(self.width, str):
@@ -162,17 +186,22 @@ class Image:
 
 @dataclass
 class PageBreak:
+    """Explicit page break marker for rendered outputs."""
+
     def to_markdown(self) -> str:
-        # Works in HTML print/PDF (Pandoc/Prince) and is harmless elsewhere
+        """Emit HTML compatible page-break element."""
         return "<div style='page-break-after: always;'></div>"
 
 
 @dataclass
 class DataFrameBlock:
+    """Wrapper for pandas-like data to render as a table."""
+
     data: Any
-    caption: Optional[str] = None
+    caption: str | None = None
 
     def to_markdown(self) -> str:
+        """Render the DataFrame as Markdown, falling back to text if unavailable."""
         try:
             import pandas as pd  # type: ignore
 
@@ -206,36 +235,45 @@ Block = Union[
 
 @dataclass
 class FigureBlock:
+    """Figure that combines an Image with caption/label info."""
+
     image: Image
-    caption: Optional[str] = None
-    label: Optional[str] = None
+    caption: str | None = None
+    label: str | None = None
     numbered: bool = True
 
 
 @dataclass
 class TableBlock:
+    """Table plus caption/label metadata."""
+
     table: Table
-    caption: Optional[str] = None
-    label: Optional[str] = None
+    caption: str | None = None
+    label: str | None = None
     numbered: bool = False
 
 
 @dataclass
 class InteractiveFigure:
+    """Wrapper for matplotlib/plotly hybrid figures."""
+
     figure: FigureBlock
-    plotly_figure: Optional[Dict[str, Any]] = None
+    plotly_figure: dict[str, Any] | None = None
 
 
 @dataclass
 class Section:
+    """Hierarchical building block containing text, tables, and figures."""
+
     title: str
-    blocks: List[Block] = field(default_factory=list)
+    blocks: list[Block] = field(default_factory=list)
     level: int = 2  # 1..6; Report controls top-level
-    pdf_style: Dict[str, Any] = field(default_factory=dict)
-    anchor: Optional[str] = None
+    pdf_style: dict[str, Any] = field(default_factory=dict)
+    anchor: str | None = None
 
     # ----- block adders -----
-    def add_text(self, *paragraphs: str) -> "Section":
+    def add_text(self, *paragraphs: str) -> Section:
+        """Append one or more paragraphs of text."""
         for p in paragraphs:
             self.blocks.append(p)
         return self
@@ -244,10 +282,11 @@ class Section:
         self,
         table: Table,
         *,
-        caption: Optional[str] = None,
-        label: Optional[str] = None,
+        caption: str | None = None,
+        label: str | None = None,
         numbered: bool = False,
-    ) -> "Section":
+    ) -> Section:
+        """Add a Table, optionally wrapping it with caption/label metadata."""
         if caption or label or numbered:
             self.blocks.append(
                 TableBlock(table=table, caption=caption, label=label, numbered=numbered)
@@ -256,7 +295,10 @@ class Section:
             self.blocks.append(table)
         return self
 
-    def add_image(self, image: Image, *, label: Optional[str] = None, numbered: bool = False) -> "Section":
+    def add_image(
+        self, image: Image, *, label: str | None = None, numbered: bool = False
+    ) -> Section:
+        """Insert an Image, promoting it to a FigureBlock when labeled/numbered."""
         if label or numbered:
             block = FigureBlock(image=image, caption=image.caption, label=label, numbered=numbered)
             self.blocks.append(block)
@@ -269,12 +311,12 @@ class Section:
         path: str | Path,
         *,
         alt: str = "",
-        caption: Optional[str] = None,
-        width: Optional[Union[int, str]] = None,
-        label: Optional[str] = None,
+        caption: str | None = None,
+        width: int | str | None = None,
+        label: str | None = None,
         numbered: bool = False,
-    ) -> "Section":
-        """Convenience to add an image by filesystem path."""
+    ) -> Section:
+        """Add an image by filesystem path."""
         return self.add_image(
             Image(path=str(path), alt=alt, caption=caption, width=width),
             label=label,
@@ -285,56 +327,56 @@ class Section:
         self,
         path: str | Path,
         *,
-        caption: Optional[str] = None,
-        label: Optional[str] = None,
-        width: Optional[Union[int, str]] = None,
+        caption: str | None = None,
+        label: str | None = None,
+        width: int | str | None = None,
         alt: str = "",
-    ) -> "Section":
+    ) -> Section:
         """Add a figure with automatic numbering support."""
         img = Image(path=str(path), alt=alt, caption=caption, width=width)
         self.blocks.append(FigureBlock(image=img, caption=caption, label=label, numbered=True))
         return self
 
-    def add_section(self, title: str) -> "Section":
+    def add_section(self, title: str) -> Section:
+        """Add a nested subsection and return it for further editing."""
         child = Section(title=title, level=min(self.level + 1, 6))
         self.blocks.append(child)
         return child
 
     # ----- common markdown constructs -----
-    def add_bullets(self, items: Iterable[str]) -> "Section":
+    def add_bullets(self, items: Iterable[str]) -> Section:
         """Add a simple unordered bullet list from an iterable of strings."""
-        lst = "\n".join(f"- {str(x)}" for x in items)
+        lst = "\n".join(f"- {x!s}" for x in items)
         if lst:
             self.blocks.append(lst)
         return self
 
-    def add_checklist(self, items: Iterable[tuple[str, bool]]) -> "Section":
+    def add_checklist(self, items: Iterable[tuple[str, bool]]) -> Section:
         """Add a checklist where each item is (text, checked)."""
         lst = "\n".join(f"- [{'x' if done else ' '}] {text}" for (text, done) in items)
         if lst:
             self.blocks.append(lst)
         return self
 
-    def add_codeblock(self, code_text: str, language: Optional[str] = None) -> "Section":
+    def add_codeblock(self, code_text: str, language: str | None = None) -> Section:
         """Add a fenced code block with optional language (robust against ``` inside)."""
-        max_ticks = 3
+        max_ticks = CODE_FENCE_MIN
         run = 0
         for ch in code_text:
             if ch == "`":
                 run += 1
-                if run > max_ticks:
-                    max_ticks = run
+                max_ticks = max(run, max_ticks)
             else:
                 run = 0
-        fence = "`" * (max_ticks if max_ticks > 3 else 3)
-        if "```" in code_text and len(fence) == 3:
+        fence = "`" * (max_ticks if max_ticks > CODE_FENCE_MIN else CODE_FENCE_MIN)
+        if "```" in code_text and len(fence) == CODE_FENCE_MIN:
             fence = "````"
         lang = language or ""
         block = f"{fence}{lang}\n{code_text}\n{fence}"
         self.blocks.append(block)
         return self
 
-    def add_strikethrough(self, text: str) -> "Section":
+    def add_strikethrough(self, text: str) -> Section:
         """Add a paragraph consisting of strikethrough text."""
         self.blocks.append(strikethrough(text))
         return self
@@ -345,15 +387,19 @@ class Section:
         *,
         out_dir: str | Path = ".easypour_math",
         dpi: int = 220,
-        caption: Optional[str] = None,
-        width: Optional[Union[int, str]] = None,
-        alt: Optional[str] = None,
-    ) -> "Section":
+        caption: str | None = None,
+        width: int | str | None = None,
+        alt: str | None = None,
+    ) -> Section:
         """Render a TeX-like formula to PNG (matplotlib mathtext) and insert as an image."""
         try:
-            from .mathstub import tex_to_png as _tex_to_png  # local import to avoid hard matplotlib dep
+            from .mathstub import (
+                tex_to_png as _tex_to_png,  # local import to avoid hard matplotlib dep
+            )
         except Exception as exc:  # pragma: no cover - import-time failure
-            raise ImportError("Matplotlib is required for add_math(); pip install matplotlib.") from exc
+            raise ImportError(
+                "Matplotlib is required for add_math(); pip install matplotlib."
+            ) from exc
         out_path = _tex_to_png(formula, Path(out_dir), dpi=dpi)
         return self.add_image(
             Image(
@@ -369,18 +415,19 @@ class Section:
         obj: Any,
         *,
         out_dir: str | Path | None = None,
-        filename: Optional[str] = None,
+        filename: str | None = None,
         alt: str = "",
-        caption: Optional[str] = None,
-        width: Optional[Union[int, str]] = None,
+        caption: str | None = None,
+        width: int | str | None = None,
         dpi: int = 180,
         interactive: bool = False,
-        label: Optional[str] = None,
+        label: str | None = None,
         numbered: bool = True,
-    ) -> "Section":
+    ) -> Section:
         """Accept a matplotlib Figure or Axes, save as PNG, and add as an Image block.
 
         Parameters
+        ----------
         - obj: matplotlib.figure.Figure or matplotlib.axes.Axes
         - out_dir: directory to save the PNG (defaults to .easypour_figs)
         - filename: optional PNG filename (defaults to mpl_{index}.png)
@@ -400,7 +447,7 @@ class Section:
         fname = filename or f"mpl_{len(self.blocks)}.png"
         out_path = base / fname
         fig.savefig(str(out_path), dpi=dpi, bbox_inches="tight")
-        plotly_payload: Optional[Dict[str, Any]] = None
+        plotly_payload: dict[str, Any] | None = None
         if interactive:
             try:
                 import plotly.io as pio  # type: ignore
@@ -410,29 +457,26 @@ class Section:
             except Exception:
                 plotly_payload = None
         # NEW: proactively close figure to avoid memory bloat in long sessions
-        try:
+        with suppress(Exception):
             import matplotlib.pyplot as _plt  # type: ignore
 
             _plt.close(fig)
-        except Exception:
-            pass
         image = Image(path=str(out_path), alt=alt, caption=caption, width=width)
         if interactive:
             fig_block = FigureBlock(image=image, caption=caption, label=label, numbered=numbered)
             self.blocks.append(InteractiveFigure(figure=fig_block, plotly_figure=plotly_payload))
             return self
         if caption or label or numbered:
-            self.blocks.append(FigureBlock(image=image, caption=caption, label=label, numbered=numbered))
+            self.blocks.append(
+                FigureBlock(image=image, caption=caption, label=label, numbered=numbered)
+            )
         else:
             self.blocks.append(image)
         return self
 
     # ----- PDF mixins / advanced layout -----
-    def add_pdf_flowable(
-        self, factory: Callable[[Any], Any]
-    ) -> "Section":
+    def add_pdf_flowable(self, factory: Callable[[Any], Any]) -> Section:
         """Inject a custom ReportLab Flowable factory for full control."""
-
         self.blocks.append(FlowableDirective(factory=factory))
         return self
 
@@ -442,9 +486,8 @@ class Section:
         right_blocks: Iterable[Block],
         *,
         gap: float = 12.0,
-    ) -> "Section":
+    ) -> Section:
         """Render two block lists side-by-side inside the PDF output."""
-
         self.blocks.append(
             TwoColumnDirective(left=list(left_blocks), right=list(right_blocks), gap=gap)
         )
@@ -459,9 +502,8 @@ class Section:
         width: float | None = None,
         height: float | None = None,
         page: int | None = None,
-    ) -> "Section":
+    ) -> Section:
         """Position an image using absolute ReportLab coordinates (points)."""
-
         self.blocks.append(
             AbsoluteImageDirective(
                 path=str(path),
@@ -483,9 +525,8 @@ class Section:
         height: float | None = None,
         caption: str | None = None,
         padding: float = 6.0,
-    ) -> "Section":
+    ) -> Section:
         """Add an image that floats left/right/center with optional caption."""
-
         self.blocks.append(
             FloatingImageDirective(
                 path=str(path),
@@ -498,37 +539,33 @@ class Section:
         )
         return self
 
-    def add_vertical_space(self, height: float) -> "Section":
+    def add_vertical_space(self, height: float) -> Section:
         """Insert raw vertical whitespace (points) into the PDF output."""
-
         self.blocks.append(VerticalSpaceDirective(height=float(height)))
         return self
 
-    def add_double_space(self) -> "Section":
-        """Convenience spacer roughly equivalent to an extra blank line."""
-
+    def add_double_space(self) -> Section:
+        """Insert a spacer roughly equivalent to an extra blank line."""
         self.blocks.append(DoubleSpaceDirective())
         return self
 
-    def add_new_page(self) -> "Section":
+    def add_new_page(self) -> Section:
         """Insert a hard page break in every renderer that supports it."""
-
         self.blocks.append(PageBreak())
         return self
 
     # ----- render to markdown -----
     def to_markdown(self) -> str:
+        """Render this section (and nested sections) to Markdown."""
         self.anchor = self.anchor or _slug(self.title)
-        lines: List[str] = [f"{'#' * self.level} {self.title}"]
+        lines: list[str] = [f"{'#' * self.level} {self.title}"]
         lines.append(f"<a id='{self.anchor}'></a>")
         lines.append("")
         for blk in self.blocks:
             # Custom per-type rendering
             if isinstance(blk, str):
                 lines += [blk, ""]
-            elif isinstance(blk, Table):
-                lines += [blk.to_markdown(), ""]
-            elif isinstance(blk, Image):
+            elif isinstance(blk, Table | Image):
                 lines += [blk.to_markdown(), ""]
             elif isinstance(blk, InteractiveFigure):
                 lines += [blk.figure.image.to_markdown(), ""]
@@ -542,9 +579,7 @@ class Section:
                 caption = blk.caption or blk.image.caption
                 if caption:
                     lines += [f"**{label_text}:** {caption}", ""]
-            elif isinstance(blk, PageBreak):
-                lines += [blk.to_markdown(), ""]
-            elif isinstance(blk, DataFrameBlock):
+            elif isinstance(blk, PageBreak | DataFrameBlock):
                 lines += [blk.to_markdown(), ""]
             elif isinstance(blk, TableBlock):
                 lines += [blk.table.to_markdown(), ""]
@@ -557,10 +592,8 @@ class Section:
                 lines += [blk.to_markdown(), ""]
             elif isinstance(blk, MarkdownRenderable) or hasattr(blk, "to_markdown"):
                 # Protocol/fallback: any custom block with to_markdown()
-                try:
+                with suppress(Exception):
                     lines += [blk.to_markdown(), ""]  # type: ignore[attr-defined]
-                except Exception:
-                    pass
         return "\n".join(lines).strip()
 
 
@@ -568,40 +601,40 @@ class Section:
 # Report
 # =========================================================
 
+
 @dataclass
 class Report:
+    """Top-level container holding sections plus render configuration."""
+
     title: str
-    author: Optional[str] = None
-    date_str: Optional[str] = None
-    meta: Dict[str, Any] = field(default_factory=dict)
-    sections: List[Section] = field(default_factory=list)
-    pdf_style: Dict[str, Any] = field(default_factory=dict)
-    pdf_template_options: Dict[str, Any] = field(default_factory=dict)
+    author: str | None = None
+    date_str: str | None = None
+    meta: dict[str, Any] = field(default_factory=dict)
+    sections: list[Section] = field(default_factory=list)
+    pdf_style: dict[str, Any] = field(default_factory=dict)
+    pdf_template_options: dict[str, Any] = field(default_factory=dict)
 
     # Streamlit customization/state
-    streamlit_options: Dict[str, Any] = field(default_factory=dict)
-    streamlit_hooks: Dict[str, Callable[..., Any]] = field(default_factory=dict)
-    streamlit_renderers: Dict[type, Callable[[Any, Any, "Report"], None]] = field(
+    streamlit_options: dict[str, Any] = field(default_factory=dict)
+    streamlit_hooks: dict[str, Callable[..., Any]] = field(default_factory=dict)
+    streamlit_renderers: dict[type, Callable[[Any, Any, Report], None]] = field(
         default_factory=dict
     )
-    streamlit_theme: Dict[str, str] = field(default_factory=dict)
+    streamlit_theme: dict[str, str] = field(default_factory=dict)
 
     # Dash options
-    dash_options: Dict[str, Any] = field(default_factory=dict)
-    dash_css_text: Optional[str] = field(default=None)
-    references: Dict[str, str] = field(default_factory=dict)
+    dash_options: dict[str, Any] = field(default_factory=dict)
+    dash_css_text: str | None = field(default=None)
+    references: dict[str, str] = field(default_factory=dict)
 
     _st: Any | None = field(default=None, repr=False, compare=False)
-    _citation_index: Dict[str, int] = field(default_factory=dict, init=False, repr=False)
-    _citation_order: List[str] = field(default_factory=list, init=False, repr=False)
-    _label_index: Dict[str, str] = field(default_factory=dict, init=False, repr=False)
+    _citation_index: dict[str, int] = field(default_factory=dict, init=False, repr=False)
+    _citation_order: list[str] = field(default_factory=list, init=False, repr=False)
+    _label_index: dict[str, str] = field(default_factory=dict, init=False, repr=False)
 
     # ---------- PDF ----------
-    def write_pdf(self, path: str, template: "PDFTemplate|None" = None) -> str:  # type: ignore[name-defined]
-        """
-        Render this Report to a PDF using ReportLab.
-        """
-
+    def write_pdf(self, path: str, template: PDFTemplate | None = None) -> str:  # type: ignore[name-defined]
+        """Render this report to a PDF using the provided (or default) template."""
         self._ensure_label_index()
         from .render import PDFTemplate, report_to_pdf  # local import to avoid circular dependency
 
@@ -609,7 +642,8 @@ class Report:
         tpl = template or PDFTemplate()
         self._apply_pdf_template_overrides(tpl, user_template=supplied_template)
         return report_to_pdf(self, out_pdf_path=path, template=tpl)
-    def configure_pdf(self, **options) -> "Report":
+
+    def configure_pdf(self, **options) -> Report:
         """Configure PDF-level layout defaults without manually creating a template.
 
         Supported keys include:
@@ -622,7 +656,6 @@ class Report:
         - figure_caption_style / table_caption_style: dicts merged into caption styles
         - autoscale_images / autoscale_tables: toggle automatic sizing safeguards
         """
-
         for key, value in options.items():
             if key in {"figure_caption_style", "table_caption_style"} and isinstance(value, dict):
                 merged = dict(self.pdf_template_options.get(key, {}))
@@ -639,21 +672,26 @@ class Report:
         return self
 
     def add_section(self, title: str) -> Section:
+        """Create a new top-level section and return it."""
         sec = Section(title=title, level=2)
         self.sections.append(sec)
         return sec
 
     # ---------- utils ----------
     def walk(self) -> Iterable[Section]:
+        """Yield every section/subsection in depth-first order."""
+
         def _rec(s: Section):
             yield s
             for b in s.blocks:
                 if isinstance(b, Section):
                     yield from _rec(b)
+
         for s in self.sections:
             yield from _rec(s)
 
-    def _apply_pdf_template_overrides(self, template: "PDFTemplate", *, user_template: bool) -> None:  # type: ignore[name-defined]
+    def _apply_pdf_template_overrides(self, template: PDFTemplate, *, user_template: bool) -> None:  # type: ignore[name-defined]
+        """Apply configure_pdf overrides to the given template instance."""
         if not self.pdf_template_options:
             return
 
@@ -673,8 +711,11 @@ class Report:
         overrides = self.pdf_template_options
         if "margins" in overrides:
             margins = overrides["margins"]
-            if not isinstance(margins, (list, tuple)) or len(margins) != 4:
-                raise ValueError("configure_pdf(margins=...) expects four values (left, right, top, bottom).")
+            _MARGIN_COUNT = 4
+            if not isinstance(margins, (list | tuple)) or len(margins) != _MARGIN_COUNT:
+                raise ValueError(
+                    "configure_pdf(margins=...) expects four values (left, right, top, bottom)."
+                )
             left, right, top, bottom = margins
             assign("margin_left", float(left))
             assign("margin_right", float(right))
@@ -725,7 +766,8 @@ class Report:
                         warn_override(f"{style_key}.{key}", old, value)
                 base.update(style_update)
 
-    def find_section(self, title: str) -> Optional[Section]:
+    def find_section(self, title: str) -> Section | None:
+        """Locate a section by case-insensitive title."""
         t = title.strip().lower()
         for s in self.walk():
             if s.title.strip().lower() == t:
@@ -733,7 +775,8 @@ class Report:
         return None
 
     # ---------- render paths ----------
-    def _build_toc(self) -> List[str]:
+    def _build_toc(self) -> list[str]:
+        """Generate a Markdown-formatted table-of-contents."""
         toc = ["## Table of Contents", ""]
 
         def _iter(sec: Section) -> Iterable[Section]:
@@ -749,7 +792,8 @@ class Report:
                 toc.append(f"{indent}- [{sec.title}](#{anchor})")
         return toc
 
-    def to_markdown(self, *, asset_base: Optional[Path] = None) -> str:
+    def to_markdown(self, *, asset_base: Path | None = None) -> str:
+        """Serialize the full report to Markdown."""
         self._ensure_label_index()
         dt = self.date_str or date.today().isoformat()
         front_matter = [
@@ -764,11 +808,11 @@ class Report:
         front = "\n".join([x for x in front_matter if x is not None])
 
         # Optionally relocate assets into a dedicated folder and rewrite paths temporarily
-        img_restore: List[tuple[Image, str]] = []
+        img_restore: list[tuple[Image, str]] = []
         if asset_base is not None:
             am = AssetManager(base=Path(asset_base))
             for sec in self.walk():
-                for i, blk in enumerate(list(sec.blocks)):
+                for _, blk in enumerate(list(sec.blocks)):
                     if isinstance(blk, Image):
                         try:
                             newp = am.put(blk.path)
@@ -784,7 +828,8 @@ class Report:
 
         # TOC
         toc = self._build_toc()
-        if len(toc) > 2:
+        _TOC_MIN_ENTRIES = 2
+        if len(toc) > _TOC_MIN_ENTRIES:
             parts += ["\n".join(toc), ""]
 
         for s in self.sections:
@@ -798,6 +843,7 @@ class Report:
         return md
 
     def write_markdown(self, path: str | Path) -> str:
+        """Write `to_markdown()` output to disk and return the path."""
         self._ensure_label_index()
         md = self.to_markdown()
         p = Path(path)
@@ -811,10 +857,10 @@ class Report:
         Example:
             Report(title='Demo', headings=['Summary', 'Metrics', 'Notes > Todo'])
         """
-        paths: List[str] = []
+        paths: list[str] = []
 
-        def walk(sec: Section, parent: List[str]) -> None:
-            full = parent + [sec.title]
+        def walk(sec: Section, parent: list[str]) -> None:
+            full = [*parent, sec.title]
             paths.append(" > ".join(full))
             for blk in sec.blocks:
                 if isinstance(blk, Section):
@@ -827,7 +873,7 @@ class Report:
         return f"Report(title={self.title!r}, headings=[{hs}])"
 
     # ---------- streamlit customization API ----------
-    def configure_streamlit(self, **options) -> "Report":
+    def configure_streamlit(self, **options) -> Report:
         """Configure default Streamlit options.
 
         Supported keys:
@@ -842,10 +888,10 @@ class Report:
     def set_streamlit_hooks(
         self,
         *,
-        sidebar: Optional[Callable[[Any, "Report"], None]] = None,
-        before_render: Optional[Callable[[Any, "Report"], None]] = None,
-        after_render: Optional[Callable[[Any, "Report"], None]] = None,
-    ) -> "Report":
+        sidebar: Callable[[Any, Report], None] | None = None,
+        before_render: Callable[[Any, Report], None] | None = None,
+        after_render: Callable[[Any, Report], None] | None = None,
+    ) -> Report:
         """Register callback hooks for Streamlit rendering.
 
         - sidebar(st, report): called inside st.sidebar before rendering content
@@ -861,8 +907,8 @@ class Report:
         return self
 
     def register_streamlit_renderer(
-        self, block_type: type, renderer: Callable[[Any, Any, "Report"], None]
-    ) -> "Report":
+        self, block_type: type, renderer: Callable[[Any, Any, Report], None]
+    ) -> Report:
         """Associate a custom renderer for a specific block type.
 
         The renderer signature is (st, block, report) and should emit Streamlit widgets.
@@ -873,20 +919,20 @@ class Report:
     def set_streamlit_theme(
         self,
         *,
-        primary_color: Optional[str] = None,
-        background_color: Optional[str] = None,
-        text_color: Optional[str] = None,
-        secondary_background_color: Optional[str] = None,
-        link_color: Optional[str] = None,
-        font_family: Optional[str] = None,
-        css: Optional[str] = None,
-    ) -> "Report":
+        primary_color: str | None = None,
+        background_color: str | None = None,
+        text_color: str | None = None,
+        secondary_background_color: str | None = None,
+        link_color: str | None = None,
+        font_family: str | None = None,
+        css: str | None = None,
+    ) -> Report:
         """Set simple theming via injected CSS in Streamlit.
 
         Colors should be CSS color values (e.g., "#ff6600" or "rgb(10,10,10)").
         If `css` is provided, it is injected verbatim in a <style> tag after computed rules.
         """
-        theme: Dict[str, str] = {}
+        theme: dict[str, str] = {}
         if primary_color:
             theme["primary_color"] = primary_color
         if background_color:
@@ -907,12 +953,12 @@ class Report:
     def configure_dash(
         self,
         *,
-        external_stylesheets: Optional[List[str]] = None,
-        css_text: Optional[str] = None,
-        tabs: Optional[List[str]] = None,
-        preview_height: Optional[str] = None,
-        page_title: Optional[str] = None,
-    ) -> "Report":
+        external_stylesheets: list[str] | None = None,
+        css_text: str | None = None,
+        tabs: list[str] | None = None,
+        preview_height: str | None = None,
+        page_title: str | None = None,
+    ) -> Report:
         """Configure Dash theming and layout options.
 
         - external_stylesheets: list of CSS URLs (e.g., Bootstrap)
@@ -934,7 +980,7 @@ class Report:
         return self
 
     # ---------- references / citations ----------
-    def add_reference(self, key: str, entry: str) -> "Report":
+    def add_reference(self, key: str, entry: str) -> Report:
         """Register a reference entry (e.g., bibliography string)."""
         self.references[key] = entry
         return self
@@ -960,12 +1006,12 @@ class Report:
         return sec
 
     # ---------- figure/table labels ----------
-    def _ensure_label_index(self) -> Dict[str, str]:
+    def _ensure_label_index(self) -> dict[str, str]:
         fig_prefix = self.meta.get("figure_prefix", "Figure")
         table_prefix = self.meta.get("table_prefix", "Table")
         figure_counter = 0
         table_counter = 0
-        label_index: Dict[str, str] = {}
+        label_index: dict[str, str] = {}
 
         def assign_figure(block: FigureBlock) -> None:
             nonlocal figure_counter
@@ -975,7 +1021,7 @@ class Report:
                 label_text = f"{fig_prefix} {figure_counter}"
             else:
                 label_text = fig_prefix
-            setattr(block, "_mf_label_text", label_text)
+            block._mf_label_text = label_text
             if block.label:
                 label_index[block.label] = label_text
 
@@ -987,7 +1033,7 @@ class Report:
                 label_text = f"{table_prefix} {table_counter}"
             else:
                 label_text = table_prefix
-            setattr(block, "_mf_label_text", label_text)
+            block._mf_label_text = label_text
             if block.label:
                 label_index[block.label] = label_text
 
@@ -1008,8 +1054,8 @@ class Report:
         self._label_index = label_index
         return label_index
 
-    def ref(self, label: str, *, default: Optional[str] = None) -> str:
-        """Reference a labeled figure/table: returns text like ``Figure 2``."""
+    def ref(self, label: str, *, default: str | None = None) -> str:
+        """Return the numbered label (e.g., ``Figure 2``) for a reference."""
         index = self._ensure_label_index()
         if label in index:
             return index[label]
@@ -1032,19 +1078,8 @@ class Report:
 
     # ---------- interactive previews ----------
     def show_streamlit(self, *, height: int = 420) -> None:
+        """Render this report inside a Streamlit app with helpful tabs."""
         self._ensure_label_index()
-        """Render this report inside a Streamlit app with sane defaults.
-
-        Shows tabs for a native Report view, raw Markdown, HTML preview, and a PDF
-        download button (when ReportLab is available). Intended usage:
-
-            # my_app.py
-            from easypour import Report
-            rpt = Report("Demo").add_section("S").add_text("Hello")
-            rpt.show_streamlit()
-
-        Run with: streamlit run my_app.py
-        """
         try:
             import streamlit as st  # type: ignore
         except Exception as e:  # pragma: no cover - optional dependency
@@ -1067,14 +1102,12 @@ class Report:
         height = int(self.streamlit_options.get("height", height))
 
         # Best effort page config (ignore if too late in script execution)
-        try:
+        with suppress(Exception):
             st.set_page_config(page_title=page_title, layout=layout)
-        except Exception:
-            pass
 
         # Apply simple theme via CSS injection if provided
         if self.streamlit_theme:
-            rules: List[str] = []
+            rules: list[str] = []
             bg = self.streamlit_theme.get("background_color")
             text = self.streamlit_theme.get("text_color")
             link = self.streamlit_theme.get("link_color")
@@ -1139,7 +1172,7 @@ class Report:
 
         def _display_image_block(img: Image):
             use_container = None
-            w_px: Optional[int] = None
+            w_px: int | None = None
             if img.width is not None:
                 if isinstance(img.width, str):
                     w = img.width.strip()
@@ -1164,9 +1197,11 @@ class Report:
 
         def _render_section(sec: Section):
             # Map heading level to Streamlit headers
-            if sec.level <= 2:
+            _H1_H2_MAX = 2
+            _H3_LEVEL = 3
+            if sec.level <= _H1_H2_MAX:
                 st.header(sec.title)
-            elif sec.level == 3:
+            elif sec.level == _H3_LEVEL:
                 st.subheader(sec.title)
             else:
                 st.markdown(f"{'#' * sec.level} {sec.title}")
@@ -1192,7 +1227,7 @@ class Report:
                         df = pd.DataFrame(blk.rows, columns=blk.headers)
                         st.table(df)
                     except Exception:
-                        st.table([dict(zip(blk.headers, r)) for r in blk.rows])
+                        st.table([dict(zip(blk.headers, r, strict=False)) for r in blk.rows])
                 elif isinstance(blk, InteractiveFigure):
                     displayed = False
                     if blk.plotly_figure:
@@ -1285,14 +1320,8 @@ class Report:
                 st.warning("after_render hook failed.")
 
     def to_dash_app(self):  # pragma: no cover - optional dependency helper
+        """Return a Dash app mirroring this report with interactive widgets."""
         self._ensure_label_index()
-        """Create a Dash app that mirrors this report with interactive widgets.
-
-        Returns a ready-to-run ``dash.Dash`` instance. Usage::
-
-            app = report.to_dash_app()
-            app.run_server(debug=True)
-        """
 
         try:
             from dash import Dash, Input, Output, dcc, html  # type: ignore
@@ -1314,8 +1343,9 @@ class Report:
 
         preview_height = self.dash_options.get("preview_height", "70vh")
         tabs = self.dash_options.get("tabs", ["Report", "Markdown", "HTML", "PDF"])
-        pdf_button_id: Optional[str] = None
-        pdf_download_id: Optional[str] = None
+        pdf_button_id: str | None = None
+        pdf_download_id: str | None = None
+
         def _stable_id(*parts: str) -> str:
             h = hashlib.md5("||".join(parts).encode()).hexdigest()[:10]
             return f"mf_{h}"
@@ -1331,9 +1361,9 @@ class Report:
             except Exception:
                 return path
 
-        def _table_component(headers: List[str], rows: List[List[Any]]):
+        def _table_component(headers: list[str], rows: list[list[Any]]):
             if dash_table is not None:
-                data = [dict(zip(headers, r)) for r in rows]
+                data = [dict(zip(headers, r, strict=False)) for r in rows]
                 columns = [{"name": h, "id": h} for h in headers]
                 return dash_table.DataTable(
                     columns=columns,
@@ -1345,9 +1375,11 @@ class Report:
             # Fallback plain HTML table
             header_cells = [html.Th(h) for h in headers]
             body_rows = [html.Tr([html.Td(str(cell)) for cell in row]) for row in rows]
-            return html.Table([html.Thead(html.Tr(header_cells)), html.Tbody(body_rows)], className="mf-table")
+            return html.Table(
+                [html.Thead(html.Tr(header_cells)), html.Tbody(body_rows)], className="mf-table"
+            )
 
-        def _image_component(img: Image, caption: Optional[str] = None):
+        def _image_component(img: Image, caption: str | None = None):
             width = None
             if isinstance(img.width, int):
                 width = f"{img.width}px"
@@ -1370,13 +1402,13 @@ class Report:
                 5: html.H5,
             }
             heading_cls = heading_map.get(sec.level, html.H6)
-            children: List[Any] = [heading_cls(sec.title)]
+            children: list[Any] = [heading_cls(sec.title)]
             for idx, blk in enumerate(sec.blocks):
                 children.extend(_render_block(sec, blk, idx))
             return html.Div(children, className=f"mf-section level-{sec.level}")
 
-        def _render_block(sec: Section, blk: Any, index: int) -> List[Any]:
-            elems: List[Any] = []
+        def _render_block(sec: Section, blk: Any, index: int) -> list[Any]:
+            elems: list[Any] = []
             if isinstance(blk, str):
                 elems.append(dcc.Markdown(blk, className="mf-text"))
             elif isinstance(blk, Table):
@@ -1417,19 +1449,20 @@ class Report:
                     elems.append(dcc.Markdown(str(blk)))
             return elems
 
-        report_children = [
-            _render_section(sec)
-            for sec in self.sections
-        ] or [html.Div(dcc.Markdown("(No sections defined yet.)"), className="mf-empty")]
+        report_children = [_render_section(sec) for sec in self.sections] or [
+            html.Div(dcc.Markdown("(No sections defined yet.)"), className="mf-empty")
+        ]
 
-        tab_components: List[Any] = []
+        tab_components: list[Any] = []
         tab_value = None
         for name in tabs:
             value = name.lower()
             if tab_value is None:
                 tab_value = value
             if name == "Report":
-                tab_components.append(dcc.Tab(label="Report", value=value, children=report_children))
+                tab_components.append(
+                    dcc.Tab(label="Report", value=value, children=report_children)
+                )
             elif name == "Markdown":
                 tab_components.append(
                     dcc.Tab(
@@ -1439,7 +1472,11 @@ class Report:
                             dcc.Textarea(
                                 value=md_text,
                                 readOnly=True,
-                                style={"width": "100%", "height": preview_height, "fontFamily": "monospace"},
+                                style={
+                                    "width": "100%",
+                                    "height": preview_height,
+                                    "fontFamily": "monospace",
+                                },
                             )
                         ],
                     )
@@ -1452,7 +1489,11 @@ class Report:
                         children=[
                             html.Iframe(
                                 srcDoc=html_doc,
-                                style={"width": "100%", "height": preview_height, "border": "1px solid #ddd"},
+                                style={
+                                    "width": "100%",
+                                    "height": preview_height,
+                                    "border": "1px solid #ddd",
+                                },
                             )
                         ],
                     )
@@ -1471,7 +1512,7 @@ class Report:
                         ],
                     )
                 )
-        layout_body: List[Any] = []
+        layout_body: list[Any] = []
         if self.dash_css_text:
             layout_body.append(html.Style(self.dash_css_text))
         layout_body.append(html.H1(self.title))
@@ -1485,6 +1526,7 @@ class Report:
         app.layout = html.Div(layout_body, style={"padding": "1rem 2rem"})
 
         if pdf_button_id and pdf_download_id:
+
             @app.callback(
                 Output(pdf_download_id, "data"),
                 Input(pdf_button_id, "n_clicks"),

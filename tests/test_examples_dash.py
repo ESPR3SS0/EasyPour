@@ -1,12 +1,13 @@
 import importlib
-import pytest
 
+import pytest
 from easypour import markdown_to_html
 
 
 def has_dash():
     try:
         import dash  # noqa: F401
+
         return True
     except Exception:
         return False

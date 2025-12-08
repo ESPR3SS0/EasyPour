@@ -1,6 +1,7 @@
 # tests/test_core_edge_cases.py
 import os
-from easypour import Table, Image, Report
+
+from easypour import Image, Report, Table
 
 
 def test_table_to_markdown_empty_headers():
@@ -17,7 +18,7 @@ def test_table_from_dicts_empty_iterable():
 def test_table_str_coercion_for_numbers():
     t = Table(headers=["A", "B"], rows=[[1, 2.5]])
     md = t.to_markdown().strip().splitlines()
-    assert md[2] in {"| 1 | 2.5 |", "| 1 | 2.5 |"}
+    assert md[2] in {"| 1 | 2.5 |"}
 
 
 def test_image_caption_only(tmp_png):
@@ -25,14 +26,14 @@ def test_image_caption_only(tmp_png):
     md = im.to_markdown()
     assert md.startswith("<figure")
     assert "figcaption" in md
-    assert "style=\"width:" not in md
+    assert 'style="width:' not in md
 
 
 def test_image_width_only(tmp_png):
     im = Image(path=str(tmp_png), alt="dot", width="50%")
     md = im.to_markdown()
     assert md.startswith("<figure")
-    assert "style=\"width:50%;\"" in md
+    assert 'style="width:50%;"' in md
     assert "figcaption" not in md
 
 

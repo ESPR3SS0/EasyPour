@@ -123,6 +123,7 @@ Tip: `--builder` and `--from-md` are mutually exclusive.
 - Run all tests: `pytest -q`
 - Quick, no-PDF/CLI tests: `pytest -q -m "not pdf and not cli"`
 - Lint/format: `ruff check .` and `ruff format .`
+- Optional Git hooks: `pre-commit install` (runs Ruff automatically)
 
 Enjoy making many marks! ✨
 

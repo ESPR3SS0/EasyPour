@@ -22,7 +22,7 @@ docs = [
   "pymdown-extensions>=10.12,<11",
 ]
 plots = ["matplotlib"]
-dev = ["pytest>=8.4.2,<9", "ruff>=0.6.0,<0.7"]
+dev = ["pytest>=8.4.2,<9", "ruff>=0.6.0,<0.7", "pre-commit>=3.7.0,<4"]
 weasy = ["weasyprint>=66.0,<67"]
 
 [project.urls]
@@ -65,6 +65,7 @@ hatch = ">=1.14.1,<2"
 mkdocs-material = ">=9.6.22,<10"
 pytest = ">=9.0.1,<10"
 twine = ">=6.2.0,<7"
+pre-commit = ">=4.5.0,<5"
 
 
 
@@ -74,13 +75,14 @@ twine = ">=6.2.0,<7"
 line-length = 100
 target-version = "py313"
 src = ["src", "tests"]
-include = ["pyproject.toml", "src/**/*.py", "tests/**/*.py", "scripts/**/*.py", "pynto/**/*.py"]
+include = ["pyproject.toml", "src/**/*.py", "tests/**/*.py", "scripts/**/*.py", "easypour/**/*.py"]
 
 [tool.ruff.lint]
 # Defaults: E/F (pycodestyle/pyflakes), I (isort), UP (pyupgrade),
 # B (bugbear), SIM (simplify), C4 (comprehensions), Q (quotes), PL (pylint-lite), RUF (extra rules), D (docstrings)
 select = ["E", "F", "I", "UP", "B", "SIM", "C4", "Q", "PL", "RUF", "D"]
 ignore = ["E501", "C901", "PLR0915", "PLR0912", "PLR0913", "PLR0917"]  # let the formatter manage line length
+extend-select = ["SIM108", "UP038", "D103", "RUF005", "D101"]
 fixable = ["ALL"]
 
 [tool.ruff.lint.per-file-ignores]

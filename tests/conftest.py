@@ -1,10 +1,9 @@
 # tests/conftest.py
 import base64
-import os
 import io
 import pathlib
 import sys
-import importlib
+
 import pytest
 
 # Ensure tests import the local workspace easypour package, not an installed one.
@@ -14,7 +13,8 @@ if str(ROOT) not in sys.path:
 if "easypour" in sys.modules:
     del sys.modules["easypour"]
 
-from easypour import Report, Section, Table, Image
+from easypour import Image, Report, Table  # noqa: E402
+
 
 @pytest.fixture
 def tmp_png(tmp_path):
@@ -29,9 +29,11 @@ def tmp_png(tmp_path):
     p.write_bytes(data)
     return p
 
+
 @pytest.fixture
 def sample_table():
     return Table(headers=["Metric", "Value"], rows=[["Accuracy", "92.8%"], ["F1", "91.5%"]])
+
 
 @pytest.fixture
 def sample_report(tmp_png, sample_table):
@@ -51,23 +53,26 @@ def sample_report(tmp_png, sample_table):
 
     return rpt
 
+
 def can_reportlab():
     """Check if ReportLab is functional (can render a trivial PDF)."""
     try:
         from reportlab.pdfgen import canvas  # type: ignore
-        import io
+
         buf = io.BytesIO()
         c = canvas.Canvas(buf)
         c.drawString(100, 750, "ok")
         c.showPage()
         c.save()
         data = buf.getvalue()
-        return isinstance(data, (bytes, bytearray)) and data[:4] == b"%PDF"
+        return isinstance(data, (bytes | bytearray)) and data[:4] == b"%PDF"
     except Exception:
         return False
 
+
 def path_str(p):
     return str(pathlib.Path(p).resolve())
+
 
 @pytest.fixture
 def ensure_pdf_capability():
@@ -79,10 +84,11 @@ def can_weasy():
     """Check if WeasyPrint can produce a trivial PDF."""
     try:
         from weasyprint import HTML  # type: ignore
+
         buf = io.BytesIO()
         HTML(string="<p>ok</p>").write_pdf(buf)
         data = buf.getvalue()
-        return isinstance(data, (bytes, bytearray)) and data[:4] == b"%PDF"
+        return isinstance(data, (bytes | bytearray)) and data[:4] == b"%PDF"
     except Exception:
         return False
 

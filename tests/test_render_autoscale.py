@@ -1,12 +1,12 @@
 import io
 
-import pytest
-from reportlab.pdfgen import canvas as pdf_canvas
-from reportlab.platypus import KeepInFrame, Table as RLTable
-
 import easypour.render as render_mod
+import pytest
+from easypour.core import Image as CoreImage
 from easypour.core import Table as CoreTable
-from easypour.render import PDFTemplate, _image_size_from_hints, _table
+from easypour.render import PDFTemplate, _image, _image_size_from_hints, _ScaledFlowable, _table
+from reportlab.pdfgen import canvas as pdf_canvas
+from reportlab.platypus import Table as RLTable
 
 
 def _mock_image_reader(monkeypatch, size):
@@ -19,6 +19,7 @@ def _mock_image_reader(monkeypatch, size):
             return self._size
 
     monkeypatch.setattr(render_mod, "ImageReader", DummyReader)
+    monkeypatch.setattr("reportlab.lib.utils.ImageReader", DummyReader)
 
 
 def test_image_size_autoscales_large_bitmap(monkeypatch):
@@ -142,14 +143,16 @@ def test_table_autoscale_wraps_to_frame_bounds():
         layout="two",
         column_gap=18,
     )
-    table_flowable = _table(_sample_table(), template)
+    wide_table = _sample_table(num_cols=10)
+    table_flowable = _table(wide_table, template)
 
-    assert isinstance(table_flowable, KeepInFrame)
+    assert isinstance(table_flowable, _ScaledFlowable)
     frame_w, frame_h = template.frame_bounds()
-    assert table_flowable.maxWidth == pytest.approx(frame_w)
-    assert table_flowable.maxHeight == pytest.approx(frame_h)
-    assert table_flowable.mode == "shrink"
-    assert table_flowable._content and isinstance(table_flowable._content[0], RLTable)
+    buf = io.BytesIO()
+    canv = pdf_canvas.Canvas(buf)
+    wrapped_w, wrapped_h = table_flowable.wrapOn(canv, frame_w, frame_h)
+    assert wrapped_w <= frame_w + 1e-3
+    assert wrapped_h <= frame_h + 1e-3
 
 
 def test_table_autoscale_can_be_disabled():
@@ -161,8 +164,31 @@ def test_table_autoscale_shrinks_wide_custom_widths():
     template = PDFTemplate(page_size=(500, 600), margin_left=40, margin_right=40)
     tbl = _sample_table(num_cols=4, rows=3, col_widths=[220] * 4)
     flowable = _table(tbl, template)
+    assert isinstance(flowable, _ScaledFlowable)
     buf = io.BytesIO()
     canv = pdf_canvas.Canvas(buf)
     frame_w, frame_h = template.frame_bounds()
-    wrapped_w, _ = flowable.wrapOn(canv, frame_w, frame_h)
-    assert wrapped_w == pytest.approx(frame_w)
+    wrapped_w, wrapped_h = flowable.wrapOn(canv, frame_w, frame_h)
+    assert wrapped_w <= frame_w + 1e-6
+    assert wrapped_h <= frame_h + 1e-6
+
+
+def test_table_autoscale_leaves_huge_tables_to_split():
+    template = PDFTemplate(page_size=(500, 600), margin_left=40, margin_right=40)
+    tbl = _sample_table(num_cols=3, rows=200)
+    flowable = _table(tbl, template)
+    assert isinstance(flowable, RLTable)
+
+
+def test_image_flowable_shrinks_to_runtime_frame(monkeypatch):
+    _mock_image_reader(monkeypatch, (1000, 600))
+    template = PDFTemplate()
+    block = CoreImage(path="fake.png")
+    image_flow = _image(block, template)[0]
+    buf = io.BytesIO()
+    canv = pdf_canvas.Canvas(buf)
+    wrapped_w, wrapped_h = image_flow.wrapOn(canv, 200, 500)
+    assert wrapped_w == pytest.approx(200.0)
+    # When height budget is tiny, we still report the full height so the flowable moves to the next page.
+    _, tall_h = image_flow.wrapOn(canv, 200, 40)
+    assert tall_h > 40

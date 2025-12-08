@@ -1,13 +1,13 @@
 import importlib
-import pathlib
-import pytest
 
+import pytest
 from easypour import markdown_to_html
 
 
 def has_streamlit():
     try:
         import streamlit  # noqa: F401
+
         return True
     except Exception:
         return False

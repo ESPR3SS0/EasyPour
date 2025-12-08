@@ -1,19 +1,20 @@
-from __future__ import annotations
-
-from pathlib import Path
-
 """Public API exports for EasyPour.
 
 Supports both legacy short helper names (b/i/u/link) and the newer explicit
 names (bold/italic/underline/url) depending on what the core module provides.
 """
 
-# file: easypour/__init__.py
-from .render import markdown_to_html, markdown_to_pdf
-from .ieee import IEEETemplate
+from __future__ import annotations
 
+from pathlib import Path
+
+MIN_CODE_FENCE = 3
+
+# file: easypour/__init__.py
 # Core types are stable
-from .core import Report, Section, Table, Image, code  # type: ignore
+from .core import Image, Report, Section, Table, code  # type: ignore # noqa: E402
+from .ieee import IEEETemplate  # noqa: E402
+from .render import markdown_to_html, markdown_to_pdf  # noqa: E402
 
 # Expose helpers with compatibility for either naming style
 try:  # new explicit names
@@ -25,7 +26,7 @@ except Exception:  # legacy short aliases
     url = None  # type: ignore[assignment]
 
 try:  # legacy names
-    from .core import b, i, u, link  # type: ignore
+    from .core import b, i, link, u  # type: ignore
 except Exception:
     # derive legacy from new if available
     b = bold  # type: ignore[assignment]
@@ -59,45 +60,51 @@ def tex_to_png(formula: str, out_dir: Path | str, dpi: int = 220) -> Path:
 
 __all__.append("tex_to_png")
 
+
 # Backfill newer Section helpers if the core version doesn't provide them
 def _attach_section_helpers():
     # bullets
     if not hasattr(Section, "add_bullets"):
+
         def add_bullets(self, items):
-            lst = "\n".join(f"- {str(x)}" for x in items)
+            lst = "\n".join(f"- {x!s}" for x in items)
             if lst:
                 self.blocks.append(lst)
             return self
+
         Section.add_bullets = add_bullets  # type: ignore[attr-defined]
 
     # checklist
     if not hasattr(Section, "add_checklist"):
+
         def add_checklist(self, items):
             lst = "\n".join(f"- [{'x' if done else ' '}] {text}" for (text, done) in items)
             if lst:
                 self.blocks.append(lst)
             return self
+
         Section.add_checklist = add_checklist  # type: ignore[attr-defined]
 
     # codeblock
     if not hasattr(Section, "add_codeblock"):
+
         def add_codeblock(self, code_text, language=None):
             max_ticks = 3
             run = 0
             for ch in code_text:
                 if ch == "`":
                     run += 1
-                    if run > max_ticks:
-                        max_ticks = run
+                    max_ticks = max(run, max_ticks)
                 else:
                     run = 0
-            fence = "`" * (max_ticks if max_ticks > 3 else 3)
-            if "```" in code_text and len(fence) == 3:
+            fence = "`" * (max_ticks if max_ticks > MIN_CODE_FENCE else MIN_CODE_FENCE)
+            if "```" in code_text and len(fence) == MIN_CODE_FENCE:
                 fence = "````"
             lang = language or ""
             block = f"{fence}{lang}\n{code_text}\n{fence}"
             self.blocks.append(block)
             return self
+
         Section.add_codeblock = add_codeblock  # type: ignore[attr-defined]
 
     # strikethrough paragraph
@@ -105,11 +112,15 @@ def _attach_section_helpers():
         try:
             from .core import strikethrough as _st  # type: ignore
         except Exception:
+
             def _st(text):
                 return f"~~{text}~~"
+
         def add_strikethrough(self, text):
             self.blocks.append(_st(text))
             return self
+
         Section.add_strikethrough = add_strikethrough  # type: ignore[attr-defined]
+
 
 _attach_section_helpers()

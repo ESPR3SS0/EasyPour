@@ -1,5 +1,3 @@
-import pytest
-
 from easypour.core import Report, Section, Table, TableBlock
 
 

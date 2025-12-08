@@ -1,6 +1,6 @@
 # tests/test_section_lists_codeblocks.py
+
 from easypour.core import Section
-from importlib import import_module
 
 
 def test_section_bullets():

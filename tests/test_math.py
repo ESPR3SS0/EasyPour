@@ -1,5 +1,4 @@
 import pytest
-
 from easypour import Report, tex_to_png
 
 

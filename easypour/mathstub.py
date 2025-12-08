@@ -1,17 +1,19 @@
+"""Lightweight TeX-to-image helper used for math rendering."""
+
 # easypour/mathstub.py (moved under easypour)
 from __future__ import annotations
-import hashlib, io
+
+import hashlib
 from pathlib import Path
-from typing import Optional
+
 import matplotlib
+
 matplotlib.use("Agg")  # headless
 import matplotlib.pyplot as plt
 
+
 def tex_to_png(formula: str, out_dir: Path, dpi: int = 220) -> Path:
-    """
-    Render TeX-like math (matplotlib's mathtext dialect) to a tight-cropped PNG.
-    Only for small formulas; no full LaTeX install required.
-    """
+    """Render mathtext strings to tightly-cropped transparent PNG files."""
     out_dir.mkdir(parents=True, exist_ok=True)
     key = hashlib.sha1(formula.encode("utf-8")).hexdigest()[:12]
     out_path = out_dir / f"math_{key}.png"

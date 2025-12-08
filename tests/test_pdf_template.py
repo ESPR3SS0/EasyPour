@@ -1,5 +1,7 @@
-from easypour.render import PDFTemplate, _heading
+import pytest
 from easypour.ieee import IEEETemplate
+from easypour.render import PDFTemplate, _heading
+from reportlab.platypus import BaseDocTemplate
 
 
 def test_register_layout_invoked():
@@ -27,3 +29,14 @@ def test_ieee_template_defaults():
     assert tpl.layout == "two"
     assert tpl.first_page_layout == "single"
     assert tpl.figure_prefix == "Fig."
+
+
+def test_single_layout_uses_base_template(tmp_path):
+    tpl = PDFTemplate()
+    doc = tpl.make_document(str(tmp_path / "demo.pdf"))
+    assert isinstance(doc, BaseDocTemplate)
+    assert doc.pageTemplates
+    frame = doc.pageTemplates[0].frames[0]
+    width, height = tpl.frame_bounds()
+    assert float(getattr(frame, "_width", frame.width)) == pytest.approx(width)
+    assert float(getattr(frame, "_height", frame.height)) == pytest.approx(height)

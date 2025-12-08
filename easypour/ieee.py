@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from reportlab.lib import colors
 
@@ -27,6 +26,7 @@ class IEEETemplate(PDFTemplate):
     first_page_single_column: bool = True
 
     def __post_init__(self) -> None:
+        """Populate sensible IEEE defaults for layout, fonts, and headers."""
         # Layout defaults
         self.layout = self.layout or "two"
         if self.first_page_single_column:

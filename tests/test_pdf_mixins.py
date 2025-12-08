@@ -2,10 +2,9 @@ import base64
 import pathlib
 
 import pytest
-from reportlab.platypus import Spacer
-
 from easypour import Report
 from easypour.render import PDFTemplate
+from reportlab.platypus import Spacer
 
 pytestmark = pytest.mark.pdf
 

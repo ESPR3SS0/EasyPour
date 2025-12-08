@@ -1,5 +1,5 @@
 from easypour import Report
-from easypour.core import Image, Table, FigureBlock, InteractiveFigure
+from easypour.core import FigureBlock, Image, InteractiveFigure, Table
 
 
 def test_label_references_markdown():
@@ -19,7 +19,9 @@ def test_label_references_markdown():
 def test_interactive_figure_labels():
     rpt = Report("Interactive Labels")
     sec = rpt.add_section("Interactive")
-    fig_block = FigureBlock(image=Image("plot.png", caption="Interactive figure"), label="fig:int", numbered=True)
+    fig_block = FigureBlock(
+        image=Image("plot.png", caption="Interactive figure"), label="fig:int", numbered=True
+    )
     sec.blocks.append(InteractiveFigure(figure=fig_block, plotly_figure=None))
 
     rpt.to_markdown()

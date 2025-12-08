@@ -1,11 +1,9 @@
-import pathlib
 import pytest
-
 from easypour.core import Report, Section
 
 # Skip this module if matplotlib is not available
 try:
-    import matplotlib.pyplot as plt  # noqa: F401
+    import matplotlib.pyplot as plt
 except Exception as _e:  # pragma: no cover
     pytest.skip(f"matplotlib unavailable: {_e}", allow_module_level=True)
 
@@ -15,7 +13,7 @@ def test_add_image_path_convenience(tmp_png):
     md = s.to_markdown()
     assert "![dot](" in md
     assert "figcaption" in md and "tiny" in md
-    assert "style=\"width:40%;\"" in md
+    assert 'style="width:40%;"' in md
 
 
 def _make_mpl_plot():
@@ -27,7 +25,9 @@ def _make_mpl_plot():
 
 def test_add_matplotlib_image_markdown(tmp_path):
     fig = _make_mpl_plot()
-    s = Section("S").add_matplotlib(fig, out_dir=tmp_path, filename="plot.png", alt="p", caption="cap")
+    s = Section("S").add_matplotlib(
+        fig, out_dir=tmp_path, filename="plot.png", alt="p", caption="cap"
+    )
     md = s.to_markdown()
     assert "plot.png" in md
     assert (tmp_path / "plot.png").exists()

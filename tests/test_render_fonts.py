@@ -1,5 +1,3 @@
-import pytest
-
 import easypour.render as render_mod
 from easypour import Report
 from easypour.render import PDFTemplate

@@ -13,10 +13,12 @@ Tests
 - Quick, no-PDF/CLI tests: `pytest -q -m "not pdf and not cli"`
 
 Lint/Format
-- If using Ruff: `ruff check .` and `ruff format .`
+- Ruff lint: `ruff check .`
+- Ruff format: `ruff format .`
+- Enable Git hooks with `pre-commit install` (runs Ruff before each commit)
 
 Docs
-- Install mkdocs: `pip install mkdocs`
+- Install the docs extra (includes MkDocs Material): `pip install ".[docs]"`
 - Preview: `mkdocs serve` (then open the shown URL)
 - Build static site: `mkdocs build`
 

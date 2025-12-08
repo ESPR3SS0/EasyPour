@@ -8,9 +8,9 @@ basic usage still work without extra installs.
 import importlib.util
 import pathlib
 import sys
-from typing import Optional
 
 from .render import markdown_to_html, markdown_to_pdf
+
 
 def _load_builder(py_path: pathlib.Path):
     spec = importlib.util.spec_from_file_location("report_builder", str(py_path))
@@ -18,12 +18,15 @@ def _load_builder(py_path: pathlib.Path):
     assert spec and spec.loader
     spec.loader.exec_module(mod)  # type: ignore[attr-defined]
     if not hasattr(mod, "build_report"):
-        print("Builder module must define build_report() -> (markdown:str or report_obj)", file=sys.stderr)
+        print(
+            "Builder module must define build_report() -> (markdown:str or report_obj)",
+            file=sys.stderr,
+        )
         sys.exit(2)
     return mod.build_report()
 
 
-def _guess_md_title(md_text: str) -> Optional[str]:
+def _guess_md_title(md_text: str) -> str | None:
     for line in md_text.splitlines():
         stripped = line.strip()
         if stripped.startswith("#"):
@@ -32,20 +35,21 @@ def _guess_md_title(md_text: str) -> Optional[str]:
                 return heading
     return None
 
+
 def _run(
-    builder: Optional[pathlib.Path],
-    md: Optional[pathlib.Path],
-    pdf: Optional[pathlib.Path],
-    html: Optional[pathlib.Path],
-    from_md: Optional[pathlib.Path],
+    builder: pathlib.Path | None,
+    md: pathlib.Path | None,
+    pdf: pathlib.Path | None,
+    html: pathlib.Path | None,
+    from_md: pathlib.Path | None,
 ) -> int:
     if from_md and builder:
         print("Use either --builder or --from-md, not both.", file=sys.stderr)
         return 2
 
     report_obj = None
-    title_hint: Optional[str] = None
-    md_text: Optional[str] = None
+    title_hint: str | None = None
+    md_text: str | None = None
     if from_md:
         md_text = from_md.read_text(encoding="utf-8")
         title_hint = _guess_md_title(md_text)
@@ -84,13 +88,13 @@ def _run(
     return 0
 
 
-def _fallback_parse(argv: list[str]) -> dict[str, Optional[str]]:
+def _fallback_parse(argv: list[str]) -> dict[str, str | None]:
     """Very small flag parser for --builder/--from-md/--md/--html/--pdf/--css.
 
     Avoids argparse; keeps CLI usable without Cyclopts installed.
     """
     flags = {"builder", "from-md", "md", "html", "pdf"}
-    out: dict[str, Optional[str]] = {k.replace("-", "_"): None for k in flags}
+    out: dict[str, str | None] = {k.replace("-", "_"): None for k in flags}
     it = iter(argv)
     for tok in it:
         if tok.startswith("--"):
@@ -106,6 +110,7 @@ def _fallback_parse(argv: list[str]) -> dict[str, Optional[str]]:
 
 
 def main():
+    """Entry point for the easypour CLI."""
     # Try Cyclopts first
     try:
         from cyclopts import App  # type: ignore
@@ -114,11 +119,11 @@ def main():
 
         @app.default
         def build(
-            builder: Optional[pathlib.Path] = None,
-            md: Optional[pathlib.Path] = None,
-            pdf: Optional[pathlib.Path] = None,
-            html: Optional[pathlib.Path] = None,
-            from_md: Optional[pathlib.Path] = None,
+            builder: pathlib.Path | None = None,
+            md: pathlib.Path | None = None,
+            pdf: pathlib.Path | None = None,
+            html: pathlib.Path | None = None,
+            from_md: pathlib.Path | None = None,
         ) -> None:
             code = _run(builder, md, pdf, html, from_md)
             if code:

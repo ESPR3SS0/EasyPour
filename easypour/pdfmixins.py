@@ -8,8 +8,9 @@ rendering internals.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Iterable, List, Sequence
+from typing import Any
 
 
 @dataclass
@@ -23,8 +24,8 @@ class FlowableDirective:
 class TwoColumnDirective:
     """Render two independent block lists side-by-side."""
 
-    left: List[Any] = field(default_factory=list)
-    right: List[Any] = field(default_factory=list)
+    left: list[Any] = field(default_factory=list)
+    right: list[Any] = field(default_factory=list)
     gap: float = 12.0  # points between columns
 
 

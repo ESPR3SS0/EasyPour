@@ -1,5 +1,4 @@
 # tests/test_inline_parser.py
-import pytest
 
 from easypour.inline import parse_inline
 
