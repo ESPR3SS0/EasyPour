@@ -12,7 +12,7 @@ streamlit / dash dashboards easily!
 ## Install
 Pick one of the options below.
 
-- From PyPI (if/when published):
+- From PyPI:
   - `pip install EasyPour`
 - Include optional WeasyPrint dependency (for Markdown→PDF via CLI):
   - `pip install "EasyPour[weasy]"`

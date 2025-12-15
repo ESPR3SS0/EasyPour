@@ -654,6 +654,8 @@ class Report:
         - font, font_bold, mono_font, base_font_size, h1, h2, h3, line_spacing
         - header_fn / footer_fn: callables with signature (canvas, template, page_num)
         - figure_caption_style / table_caption_style: dicts merged into caption styles
+        - heading_overrides: dict mapping heading level -> ParagraphStyle overrides
+        - paragraph_overrides: dict merged into template paragraph defaults
         - autoscale_images / autoscale_tables: toggle automatic sizing safeguards
         """
         for key, value in options.items():
@@ -765,6 +767,28 @@ class Report:
                     if user_template and old != value:
                         warn_override(f"{style_key}.{key}", old, value)
                 base.update(style_update)
+
+        if "paragraph_overrides" in overrides:
+            paragraph_update = dict(overrides["paragraph_overrides"])
+            for key, value in paragraph_update.items():
+                old = template.paragraph_overrides.get(key)
+                if user_template and old != value:
+                    warn_override(f"paragraph_overrides.{key}", old, value)
+            template.paragraph_overrides.update(paragraph_update)
+
+        if "heading_overrides" in overrides:
+            heading_updates = overrides["heading_overrides"]
+            for level_str, update in heading_updates.items():
+                try:
+                    level = int(level_str)
+                except Exception:
+                    raise ValueError("heading_overrides keys must be integers.") from None
+                target = template.heading_overrides.setdefault(level, {})
+                for key, value in update.items():
+                    old = target.get(key)
+                    if user_template and old != value:
+                        warn_override(f"heading_overrides[{level}].{key}", old, value)
+                    target[key] = value
 
     def find_section(self, title: str) -> Section | None:
         """Locate a section by case-insensitive title."""

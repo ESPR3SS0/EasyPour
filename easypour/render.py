@@ -349,13 +349,24 @@ def _paragraph_style(
     merged: dict[str, Any] = dict(template.paragraph_overrides)
     if overrides:
         merged.update(overrides)
-    font_name = merged.get("font") or merged.get("font_name") or base_font or template.font
+    font_name = (
+        merged.get("font")
+        or merged.get("font_name")
+        or merged.get("fontName")
+        or base_font
+        or template.font
+    )
     font_name = template._resolve_font(font_name) or template.font
     size = merged.get("font_size") or font_size or template.base_font_size
     leading = merged.get("leading") or (size * template.line_spacing)
     alignment_name = str(merged.get("alignment", "left")).lower()
     alignment = Alignment.get(alignment_name, TA_LEFT)
-    color_value = merged.get("color") or merged.get("text_color") or template.text_color
+    color_value = (
+        merged.get("color")
+        or merged.get("text_color")
+        or merged.get("textColor")
+        or template.text_color
+    )
     style = ParagraphStyle(
         name=f"style_{id(merged)}",
         fontName=font_name,

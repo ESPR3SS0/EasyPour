@@ -1,4 +1,5 @@
 import pytest
+from easypour import Report
 from easypour.ieee import IEEETemplate
 from easypour.render import PDFTemplate, _heading
 from reportlab.platypus import BaseDocTemplate
@@ -40,3 +41,11 @@ def test_single_layout_uses_base_template(tmp_path):
     width, height = tpl.frame_bounds()
     assert float(getattr(frame, "_width", frame.width)) == pytest.approx(width)
     assert float(getattr(frame, "_height", frame.height)) == pytest.approx(height)
+
+
+def test_configure_pdf_heading_override_merges():
+    rpt = Report("Colors")
+    rpt.configure_pdf(heading_overrides={2: {"color": "#123456"}})
+    tpl = PDFTemplate()
+    rpt._apply_pdf_template_overrides(tpl, user_template=False)  # type: ignore[arg-type]
+    assert tpl.heading_overrides[2]["color"] == "#123456"
