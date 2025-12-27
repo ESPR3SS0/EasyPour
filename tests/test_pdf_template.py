@@ -49,3 +49,12 @@ def test_configure_pdf_heading_override_merges():
     tpl = PDFTemplate()
     rpt._apply_pdf_template_overrides(tpl, user_template=False)  # type: ignore[arg-type]
     assert tpl.heading_overrides[2]["color"] == "#123456"
+
+
+def test_page_layouts_apply_to_specific_pages(tmp_path):
+    tpl = PDFTemplate()
+    tpl.page_layouts = [("two", 2), "single"]
+    doc = tpl.make_document(str(tmp_path / "multi.pdf"))
+    template_frames = {pt.id: len(pt.frames) for pt in doc.pageTemplates}
+    assert template_frames.get("PageLayout_two") == 2
+    assert template_frames.get("Main") == 1

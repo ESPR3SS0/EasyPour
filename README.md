@@ -61,9 +61,14 @@ rpt.configure_pdf(
     layout="two",
     column_gap=22,
     font="Times-Roman",
-    figure_caption_style={"font": "Times-Italic"},
+    heading_overrides={2: {"color": "#004080"}},
+    page_layouts=[("two", 3), "single"],  # cover in single column, body in two columns
 )
 rpt.write_pdf("report_two_col.pdf")
+
+# Per-section layout blocks (keeps both tables/images on the same layout)
+sec = rpt.add_section("Appendix")
+sec.add_layout_block("single", Table(headers=["X"], rows=[[1], [2]]), keep_together=True)
 
 # Use the IEEE preset for two-column output (optional)
 from easypour.ieee import IEEETemplate

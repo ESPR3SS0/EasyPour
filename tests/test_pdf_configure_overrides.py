@@ -25,6 +25,12 @@ paragraph_styles = st.dictionaries(
     max_size=2,
 )
 
+page_layout_runs = st.lists(
+    st.tuples(st.sampled_from(["single", "two"]), st.integers(min_value=1, max_value=3)),
+    min_size=1,
+    max_size=3,
+)
+
 
 @given(heading=heading_styles, paragraph=paragraph_styles)
 def test_configure_pdf_merges_heading_and_paragraph(heading, paragraph):
@@ -82,3 +88,12 @@ def test_heading_overrides_with_non_int_keys_raise(key):
     tpl = PDFTemplate()
     with pytest.raises(ValueError):
         rpt._apply_pdf_template_overrides(tpl, user_template=False)  # type: ignore[arg-type]
+
+
+@given(page_layout_runs)
+def test_configure_pdf_page_layouts(layouts):
+    rpt = Report("Layouts")
+    rpt.configure_pdf(page_layouts=layouts)
+    tpl = PDFTemplate()
+    rpt._apply_pdf_template_overrides(tpl, user_template=False)  # type: ignore[arg-type]
+    assert tpl.page_layouts == layouts

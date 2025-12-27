@@ -12,11 +12,12 @@ HTML
 
 PDF (ReportLab)
 - `Report.write_pdf(path, template=None) -> str` uses the ReportLab backend on the structured `Report`.
-- `PDFTemplate` in `easypour.render` provides tunable defaults (page size, fonts, colors, spacing) and can switch to automatic two-column pages by setting `layout="two"` and adjusting `column_gap`.
+- `PDFTemplate` in `easypour.render` provides tunable defaults (page size, fonts, colors, spacing) and can switch to automatic two-column pages by setting `layout="two"` and adjusting `column_gap`. You can also describe per-page layout sequences via `page_layouts=[("cover", 1), ("two", 5), "single"]` and each section can force a layout with `Section.add_layout_block(...)`.
 - Want to tweak those defaults without touching templates? Call `report.configure_pdf(page_size=..., margins=(...), font="Times-Roman", header_fn=...)` before `write_pdf()`. Those code-level overrides win over template settings, and if you pass a custom template EasyPour emits a warning so you know which value takes precedence.
 - Figures (`Section.add_figure` or `add_image(..., numbered=True)`) and tables (`add_table(..., caption=..., numbered=True)`) receive IEEE-style captions and numbering. Labels can be assigned and collected for custom cross-references.
 - Images referenced via `Image`/`add_image_path` are resolved directly from the filesystem; ensure the assets exist relative to your working directory.
 - Need a custom layout (single-column cover page, three-column appendix, etc.)? Call `PDFTemplate.register_layout("name", builder)` with a callable that returns a list of ReportLab `Frame`s, then set `layout="name"` or `first_page_layout="name"`. Caption prefixes and styles are configurable via `figure_prefix`, `table_prefix`, `figure_caption_style`, and `table_caption_style`.
+- Need different layouts for different parts of the document? Set `template.page_layouts = ["cover", ("two", 3), "single"]` or `report.configure_pdf(page_layouts=[...])`. For finer-grained control, `Section.add_layout_block("two", table, chart)` wraps a block of content in the requested layout and restores the default afterward.
 
 Preset templates
 - `IEEETemplate` in `easypour.ieee` builds on `PDFTemplate` with Times fonts, single-column cover page, two-column body, and running headers/page numbers tuned for IEEE conference papers. Use it directly: `report.write_pdf("paper.pdf", template=IEEETemplate())`.

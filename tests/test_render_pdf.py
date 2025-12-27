@@ -125,6 +125,17 @@ def _configure_kwargs(draw):
         kwargs["paragraph_overrides"] = {
             "color": draw(st.sampled_from(["#111111", "#444444", "#666666"]))
         }
+    if draw(st.booleans()):
+        runs = draw(
+            st.lists(
+                st.tuples(
+                    st.sampled_from(["single", "two"]), st.integers(min_value=1, max_value=3)
+                ),
+                min_size=1,
+                max_size=2,
+            )
+        )
+        kwargs["page_layouts"] = runs
     return kwargs
 
 

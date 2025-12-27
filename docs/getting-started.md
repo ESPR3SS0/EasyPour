@@ -134,5 +134,5 @@ python examples/dash/interactive_plots.py
 
 Next Steps
 - Learn the core library on the Library API page
-- See rendering options on the Rendering page
+- See rendering options (page layouts, layout blocks, templates) on the Rendering page
 - Explore ready-made examples on the Examples page

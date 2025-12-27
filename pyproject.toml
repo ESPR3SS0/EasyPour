@@ -82,7 +82,7 @@ include = ["pyproject.toml", "src/**/*.py", "tests/**/*.py", "scripts/**/*.py", 
 # Defaults: E/F (pycodestyle/pyflakes), I (isort), UP (pyupgrade),
 # B (bugbear), SIM (simplify), C4 (comprehensions), Q (quotes), PL (pylint-lite), RUF (extra rules), D (docstrings)
 select = ["E", "F", "I", "UP", "B", "SIM", "C4", "Q", "PL", "RUF", "D"]
-ignore = ["E501", "C901", "PLR0915", "PLR0912", "PLR0913", "PLR0917"]  # let the formatter manage line length
+ignore = ["E501", "C901", "PLR0915", "PLR0912", "PLR0913", "PLR0917", "I001"]  # let the formatter manage line length and import spacing
 extend-select = ["SIM108", "UP038", "D103", "RUF005", "D101"]
 fixable = ["ALL"]
 

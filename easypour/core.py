@@ -193,6 +193,9 @@ class PageBreak:
         return "<div style='page-break-after: always;'></div>"
 
 
+PAGE_BREAK = PageBreak()
+
+
 @dataclass
 class DataFrameBlock:
     """Wrapper for pandas-like data to render as a table."""
@@ -221,6 +224,7 @@ Block = Union[
     "InteractiveFigure",
     "FigureBlock",
     "TableBlock",
+    "LayoutBlock",
     "Section",
     PageBreak,
     DataFrameBlock,
@@ -251,6 +255,16 @@ class TableBlock:
     caption: str | None = None
     label: str | None = None
     numbered: bool = False
+
+
+@dataclass
+class LayoutBlock:
+    """Group of blocks that should share a specific layout template."""
+
+    layout: str
+    blocks: list[Block] = field(default_factory=list)
+    keep_together: bool = True
+    page_break_after: bool = True
 
 
 @dataclass
@@ -551,7 +565,26 @@ class Section:
 
     def add_new_page(self) -> Section:
         """Insert a hard page break in every renderer that supports it."""
-        self.blocks.append(PageBreak())
+        self.blocks.append(PAGE_BREAK)
+        return self
+
+    def add_layout_block(
+        self,
+        layout: str,
+        *blocks: Block,
+        keep_together: bool = True,
+        page_break_after: bool = True,
+    ) -> Section:
+        """Add a group of blocks that should share a specific page layout."""
+        payload = list(blocks)
+        self.blocks.append(
+            LayoutBlock(
+                layout=layout,
+                blocks=payload,
+                keep_together=keep_together,
+                page_break_after=page_break_after,
+            )
+        )
         return self
 
     # ----- render to markdown -----
@@ -656,6 +689,7 @@ class Report:
         - figure_caption_style / table_caption_style: dicts merged into caption styles
         - heading_overrides: dict mapping heading level -> ParagraphStyle overrides
         - paragraph_overrides: dict merged into template paragraph defaults
+        - page_layouts: sequence describing layout names per page (strings or (layout, count) tuples)
         - autoscale_images / autoscale_tables: toggle automatic sizing safeguards
         """
         for key, value in options.items():
@@ -678,6 +712,11 @@ class Report:
         sec = Section(title=title, level=2)
         self.sections.append(sec)
         return sec
+
+    def add_page_break(self) -> Report:
+        """Insert a top-level page break between sections."""
+        self.sections.append(Section(title="", blocks=[PAGE_BREAK], level=2))
+        return self
 
     # ---------- utils ----------
     def walk(self) -> Iterable[Section]:
@@ -757,6 +796,9 @@ class Report:
                 if user_template and current and current != normalized:
                     warn_override(f"font_files[{name!r}]", current, normalized)
                 template.font_files[name] = normalized
+
+        if "page_layouts" in overrides:
+            template.page_layouts = list(overrides["page_layouts"])
 
         for style_key in ("figure_caption_style", "table_caption_style"):
             if style_key in overrides:

@@ -21,6 +21,7 @@ from reportlab.platypus import (
     Flowable,
     Frame,
     KeepInFrame,
+    KeepTogether,
     PageTemplate,
     Paragraph,
     Spacer,
@@ -34,6 +35,7 @@ from .core import (
     DataFrameBlock,
     FigureBlock,
     InteractiveFigure,
+    LayoutBlock,
     Report,
     Section,
     TableBlock,
@@ -72,6 +74,8 @@ Alignment = {
     "justify": TA_JUSTIFY,
 }
 
+PageLayoutSpec = str | tuple[str, int] | dict[str, Any]
+
 
 @dataclass
 class _NumberingState:
@@ -100,6 +104,7 @@ class PDFTemplate:
     table_prefix: str = "Table"
     section_spacing: float = 0.35
     custom_layouts: dict[str, Callable[[PDFTemplate], list[Frame]]] = field(default_factory=dict)
+    page_layouts: list[PageLayoutSpec] = field(default_factory=list)
     autoscale_images: bool = True
     autoscale_tables: bool = True
     font_files: dict[str, str] = field(default_factory=dict)
@@ -140,6 +145,31 @@ class PDFTemplate:
         """Associate a logical font name with a concrete font file path."""
         self.font_files[str(font_name)] = str(Path(path).expanduser())
         return self
+
+    def _expand_page_layouts(self, layout_specs: Sequence[PageLayoutSpec]) -> list[str]:
+        sequence: list[str] = []
+        for spec in layout_specs:
+            layout_name: str | None = None
+            count = 1
+            if isinstance(spec, str):
+                layout_name = spec
+            elif isinstance(spec, tuple):
+                layout_name, count = spec
+            elif isinstance(spec, dict):
+                layout_name = spec.get("layout") or spec.get("name")
+                count = spec.get("count", spec.get("pages", 1))
+            if not layout_name:
+                continue
+            layout_name = str(layout_name).strip()
+            if not layout_name:
+                continue
+            try:
+                count_int = int(count)
+            except Exception:
+                count_int = 1
+            count_int = max(1, count_int)
+            sequence.extend([layout_name] * count_int)
+        return sequence
 
     def _register_font_path(self, desired_name: str, font_path: Path) -> str:
         attempt = 0
@@ -288,14 +318,15 @@ class PDFTemplate:
         self,
         output: str,
         on_page: Callable[[canvas.Canvas, Any], None] | None = None,
+        page_layouts: Sequence[PageLayoutSpec] | None = None,
     ) -> BaseDocTemplate:
         """Create a BaseDocTemplate configured with this template's layout settings."""
         layout_name = (self.layout or "single").lower()
         main_frames = self._frames_for_layout(layout_name) or self._single_frames()
-        first_frames: list[Frame] | None = None
-        if self.first_page_layout:
-            first_layout = self.first_page_layout.lower()
-            first_frames = self._frames_for_layout(first_layout) or self._single_frames()
+        per_page_specs = list(page_layouts) if page_layouts is not None else list(self.page_layouts)
+        per_page_sequence = [name.lower() for name in self._expand_page_layouts(per_page_specs)]
+        if not per_page_sequence and self.first_page_layout:
+            per_page_sequence = [self.first_page_layout.lower()]
 
         doc = BaseDocTemplate(
             output,
@@ -306,15 +337,39 @@ class PDFTemplate:
             bottomMargin=self.margin_bottom,
         )
 
+        layout_template_ids: dict[str, str] = {}
+
         def _cb(canv: canvas.Canvas, doc_obj: Any) -> None:
             if on_page:
                 on_page(canv, doc_obj)
+            if per_page_sequence:
+                doc_obj._easy_layout_tracker = getattr(doc_obj, "_easy_layout_tracker", 0) + 1  # type: ignore[attr-defined]
+                current = doc_obj._easy_layout_tracker  # type: ignore[attr-defined]
+                if current < len(per_page_sequence):
+                    next_layout = per_page_sequence[current]
+                    next_id = layout_template_ids.get(next_layout, "Main")
+                else:
+                    next_id = "Main"
+                doc_obj.handle_nextPageTemplate(next_id)
 
         templates: list[PageTemplate] = []
-        if first_frames:
-            templates.append(PageTemplate(id="First", frames=first_frames, onPage=_cb, pages=[1]))
+        if per_page_sequence:
+            unique_layouts = dict.fromkeys(per_page_sequence)
+            for layout in unique_layouts:
+                frames = self._frames_for_layout(layout) or self._single_frames()
+                template_id = f"PageLayout_{layout}"
+                layout_template_ids[layout] = template_id
+                templates.append(PageTemplate(id=template_id, frames=frames, onPage=_cb))
+        layout_template_ids["main"] = "Main"
         templates.append(PageTemplate(id="Main", frames=main_frames, onPage=_cb))
         doc.addPageTemplates(templates)
+        doc._easy_layout_templates = dict(layout_template_ids)
+        if per_page_sequence:
+            doc._easy_layout_tracker = 0  # type: ignore[attr-defined]
+            first_id = layout_template_ids.get(per_page_sequence[0], "Main")
+            doc.handle_nextPageTemplate(first_id or "Main")
+        else:
+            doc.handle_nextPageTemplate("Main")
         return doc
 
 
@@ -650,6 +705,30 @@ class _AbsoluteImageFlowable(Flowable):
         canv.restoreState()
 
 
+class _LayoutSwitchFlowable(Flowable):
+    def __init__(self, template: PDFTemplate, layout: str | None):
+        super().__init__()
+        self.template = template
+        self.layout = (layout or "main").lower()
+
+    def wrap(self, *_args: Any) -> tuple[float, float]:  # pragma: no cover - zero-sized
+        return 0.0, 0.0
+
+    def draw(self) -> None:
+        doc = getattr(self.canv, "_doctemplate", None)
+        if doc is None:
+            return
+        mapping = getattr(doc, "_easy_layout_templates", {})
+        template_id = mapping.get(self.layout)
+        if template_id is None:
+            frames = self.template._frames_for_layout(self.layout) or self.template._single_frames()
+            template_id = f"LayoutBlock_{self.layout}_{len(mapping)}"
+            doc.addPageTemplates(PageTemplate(id=template_id, frames=frames))
+            mapping[self.layout] = template_id
+            doc._easy_layout_templates = mapping  # type: ignore[attr-defined]
+        doc.handle_nextPageTemplate(template_id)
+
+
 class _ScalingImage(RLImage):
     def __init__(
         self,
@@ -731,6 +810,27 @@ def _floating_image(block: FloatingImageDirective, template: PDFTemplate) -> lis
             )
         )
     flows.append(Spacer(1, block.padding))
+    return flows
+
+
+def _layout_block_flowables(
+    block: LayoutBlock,
+    template: PDFTemplate,
+    numbering: _NumberingState,
+    labels: dict[str, str],
+) -> list[Any]:
+    flows: list[Any] = [_LayoutSwitchFlowable(template, block.layout)]
+    inner: list[Any] = []
+    for child in block.blocks:
+        inner.extend(_block_flowables(child, template, numbering, labels))
+    if inner:
+        if block.keep_together:
+            flows.append(KeepTogether(inner))
+        else:
+            flows.extend(inner)
+    if block.page_break_after:
+        flows.append(RLPageBreak())
+    flows.append(_LayoutSwitchFlowable(template, None))
     return flows
 
 
@@ -887,6 +987,8 @@ def _block_flowables(
         flows.extend(_render_dataframe(block, template))
     elif isinstance(block, Section):
         flows.extend(_render_section(block, template, numbering, labels))
+    elif isinstance(block, LayoutBlock):
+        flows.extend(_layout_block_flowables(block, template, numbering, labels))
     elif isinstance(block, FlowableDirective):
         produced = block.factory(template)
         if produced is not None:
