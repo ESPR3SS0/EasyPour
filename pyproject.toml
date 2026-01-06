@@ -3,7 +3,7 @@ name = "EasyPour"
 version = "0.1.0"
 description = "Write markdown report easily! Optionally transform into a PDF, streamlit page, or dash page!"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [{ name = "ESPR3SS0", email = "98864173+ESPR3SS0@users.noreply.github.com" }]
 license = { file = "LICENSE" }
 dependencies = [
