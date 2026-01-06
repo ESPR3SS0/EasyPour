@@ -5,6 +5,7 @@ title: Library API
 # Library API
 
 Core Types
+
 - `Report(title, author=None, date_str=None, meta=None)`
   - `add_section(title) -> Section`: append a new top-level section (H2)
   - `to_markdown() -> str`: YAML front matter + document body
@@ -33,6 +34,7 @@ Core Types
   - `to_markdown() -> str` (uses `<figure>` wrapper if `caption` or `width` is provided)
 
 Inline Helpers
+
 - `bold(text)` / alias `b(text)` -> `**text**`
 - `italic(text)` / alias `i(text)` -> `*text*`
 - `underline(text)` / alias `u(text)` -> `<u>text</u>` (HTML for portability)
@@ -40,6 +42,7 @@ Inline Helpers
 - `url(text, url)` / alias `link(text, url)` -> `[text](url)`
 
 Rendering Helpers
+
 - `markdown_to_html(md_text, title='Report', extra_css=None) -> str`
   - CommonMark + tables + strikethrough; ships with inline default CSS
   - `extra_css` is appended to the default stylesheet
@@ -56,6 +59,7 @@ Rendering Helpers
   - Supply a custom layout that returns a list of ReportLab `Frame`s; use via `layout="name"` or `first_page_layout="name"` for per-page control
 
 Interactive Previews
+
 - `Report.show_streamlit(height=420)`
   - Shows tabs for a native “Report” view, raw Markdown, HTML preview, and a PDF download button (when ReportLab is installed).
   - Run your script with `streamlit run script.py` and call `report.show_streamlit()`.
@@ -63,6 +67,7 @@ Interactive Previews
   - Returns a minimal Dash app that renders the report HTML; run with `app.run_server()`.
 
 Streamlit Customization
+
 - `Report.configure_streamlit(**options)`
   - Supported keys: `page_title`, `layout` ("wide" or "centered"), `height` (HTML tab height),
     `tabs` (subset/order of ["Report", "Markdown", "HTML", "PDF"]).
@@ -89,17 +94,21 @@ r.show_streamlit()
 ```
 
 Interactive Matplotlib (Streamlit/Dash)
+
 - `Section.add_matplotlib(fig_or_axes, interactive=True, ...)`
   - Saves a PNG for Markdown/PDF, and when Plotly is installed the same figure is converted to an interactive chart (zoom/pan/hover) in Streamlit/Dash automatically.
   - If Plotly is unavailable, the block gracefully falls back to the static image everywhere.
 
 Front Matter
+
 - `Report.to_markdown()` emits YAML front matter with `title`, optional `author`, `date` and any `meta` items you provide.
 
 Levels and Nesting
+
 - `Section.add_section()` increases heading level and clamps at H6 to keep valid Markdown structure.
 
 Matplotlib Convenience
+
 - `Section.add_matplotlib(fig_or_axes, ...)` saves a PNG and adds as an `Image` block.
 - Defaults to a local directory `.easypour_figs/` if `out_dir` is not provided.
 

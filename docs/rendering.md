@@ -11,6 +11,7 @@ HTML
 - You can append styles via `extra_css`.
 
 PDF (ReportLab)
+
 - `Report.write_pdf(path, template=None) -> str` uses the ReportLab backend on the structured `Report`.
 - `PDFTemplate` in `easypour.render` provides tunable defaults (page size, fonts, colors, spacing) and can switch to automatic two-column pages by setting `layout="two"` and adjusting `column_gap`. You can also describe per-page layout sequences via `page_layouts=[("cover", 1), ("two", 5), "single"]` and each section can force a layout with `Section.add_layout_block(...)`.
 - Want to tweak those defaults without touching templates? Call `report.configure_pdf(page_size=..., margins=(...), font="Times-Roman", header_fn=...)` before `write_pdf()`. Those code-level overrides win over template settings, and if you pass a custom template EasyPour emits a warning so you know which value takes precedence.
@@ -20,9 +21,11 @@ PDF (ReportLab)
 - Need different layouts for different parts of the document? Set `template.page_layouts = ["cover", ("two", 3), "single"]` or `report.configure_pdf(page_layouts=[...])`. For finer-grained control, `Section.add_layout_block("two", table, chart)` wraps a block of content in the requested layout and restores the default afterward.
 
 Preset templates
+
 - `IEEETemplate` in `easypour.ieee` builds on `PDFTemplate` with Times fonts, single-column cover page, two-column body, and running headers/page numbers tuned for IEEE conference papers. Use it directly: `report.write_pdf("paper.pdf", template=IEEETemplate())`.
 
 Default HTML Styles
+
 The HTML renderer injects a small default stylesheet focused on readability:
 - System fonts for text and UI-monospace for code
 - Clean table borders and padding

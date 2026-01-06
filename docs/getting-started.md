@@ -62,6 +62,7 @@ app.run_server(debug=True)
 ```
 
 CLI Basics
+
 - From Markdown to HTML/PDF (PDF requires `EasyPour[weasy]`):
   - `python -m easypour.cli --from-md report.md --html report.html`
   - `python -m easypour.cli --from-md report.md --pdf report.pdf`

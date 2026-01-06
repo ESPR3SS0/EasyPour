@@ -314,6 +314,7 @@ if __name__ == "__main__":
 ```
 
 What it does
+
 - Builds a `Report` with optional sections: metrics table, placeholder image, matplotlib plot, and a pandas DataFrame.
 - Uses `Report.show_streamlit()` to render four tabs:
   - Report: renders sections with native Streamlit widgets (headers, tables, images).
@@ -370,6 +371,7 @@ if __name__ == "__main__":
 ```
 
 What it does
+
 - Builds a `Report` similar to the Streamlit example.
 - Uses `Report.to_dash_app()` to create a Dash application with tabs for:
   - Report: renders sections inline using Dash components (headers, tables, figures).
