@@ -6,7 +6,7 @@ import io
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
@@ -74,7 +74,10 @@ Alignment = {
     "justify": TA_JUSTIFY,
 }
 
-PageLayoutSpec = str | tuple[str, int] | dict[str, Any]
+if TYPE_CHECKING:
+    PageLayoutSpec = str | tuple[str, int] | dict[str, Any]
+else:  # pragma: no cover - runtime alias to avoid older interpreter union errors
+    PageLayoutSpec = Any
 
 
 @dataclass
