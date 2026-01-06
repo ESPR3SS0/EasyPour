@@ -1,20 +1,46 @@
 ---
-title: "Simple Example"
+title: "Complex Example"
 author: "Examples"
-date: 2025-10-19
+date: 2026-01-06
 ---
 
-# Simple Example
+# Complex Example
 
 **Author:** Examples
 
-*2025-10-19*
+*2026-01-06*
 
-## Hello
+## Table of Contents
 
-This is a very small report.
+- [Summary](#summary)
+- [Artifacts](#artifacts)
 
-| A | B |
-| --- | --- |
-| 1 | 2 |
-| 3 | 4 |
+## Summary
+<a id='summary'></a>
+
+This example shows bullets, checkboxes, a code block, an image, and inline styling.
+
+We measure F1[^f1] and link to <u>underlined</u> docs at [site](https://example.com).
+
+- Bullet one
+- Bullet two
+- Bullet three
+
+- [ ] Todo item
+- [x] Completed item
+
+```python
+def fib(n):
+    a, b = 0, 1
+    for _ in range(n):
+        a, b = b, a + b
+    return a
+
+```
+
+$$F1 = 2 \cdot \frac{precision \cdot recall}{precision + recall}$$
+
+## Artifacts
+<a id='artifacts'></a>
+
+<figure>![tiny](/home/brew/ghPackages/EasyPour/examples/assets/tiny.png)<figcaption>A tiny image</figcaption></figure>

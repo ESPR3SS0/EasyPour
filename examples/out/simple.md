@@ -1,16 +1,21 @@
 ---
 title: "Simple Example"
 author: "Examples"
-date: 2025-10-19
+date: 2026-01-06
 ---
 
 # Simple Example
 
 **Author:** Examples
 
-*2025-10-19*
+*2026-01-06*
+
+## Table of Contents
+
+- [Hello](#hello)
 
 ## Hello
+<a id='hello'></a>
 
 This is a very small report.
 

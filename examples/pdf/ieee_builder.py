@@ -10,7 +10,6 @@ Outputs (under examples/out/):
 
 from __future__ import annotations
 
-import base64
 import pathlib
 import sys
 
@@ -18,28 +17,26 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from easypour import Report, Table
-from easypour.ieee import IEEETemplate
+from easypour import Report, Table  # noqa: E402
+from easypour.ieee import IEEETemplate  # noqa: E402
 
 
 def _ensure_asset() -> pathlib.Path:
     assets = ROOT / "examples" / "assets"
     assets.mkdir(parents=True, exist_ok=True)
-    png = assets / "latency_tiny.png"
+    png = assets / "layer_sparsity.png"
     if not png.exists():
-        data = (
-            "iVBORw0KGgoAAAANSUhEUgAAAFAAAAAUCAYAAABXi6xwAAAABHNCSVQICAgIfAhkiAAAAC1J"
-            "REFUeJztwTEBAAAAwqD1T20KP6AAAAAAAAAAAAAAAAAAAAAAAH4Bp3wAATW7VwkAAAAASUVO"
-            "RK5CYII="
+        raise FileNotFoundError(
+            f"Expected layer_sparsity.png under {assets}. Add a valid PNG before running this example."
         )
-        png.write_bytes(base64.b64decode(data))
     return png
 
 
 def build_report(asset_path: pathlib.Path) -> Report:
+    """Construct a sample IEEE-style report with references, tables, and figures."""
     rpt = Report("Sample IEEE Paper", author="A. Researcher, B. Scientist")
-    rpt.add_reference("smith19", "J. Smith and R. Jones, \"Neural Widgets,\" IEEE Trans., 2019.")
-    rpt.add_reference("nguyen21", "P. Nguyen, \"Accelerating Edge Models,\" Proc. IEEE, 2021.")
+    rpt.add_reference("smith19", 'J. Smith and R. Jones, "Neural Widgets," IEEE Trans., 2019.')
+    rpt.add_reference("nguyen21", 'P. Nguyen, "Accelerating Edge Models," Proc. IEEE, 2021.')
 
     abstract = rpt.add_section("Abstract")
     abstract.add_text(
@@ -58,7 +55,12 @@ def build_report(asset_path: pathlib.Path) -> Report:
         "We generate Markdown first, then convert it to a structured PDF using "
         "EasyPour's `Report.write_pdf()` and `IEEETemplate`."
     )
-    method.add_figure(asset_path, caption="Latency trend for the proposed system.", label="fig:latency", width="70%")
+    method.add_figure(
+        asset_path,
+        caption="Latency trend for the proposed system.",
+        label="fig:latency",
+        width="70%",
+    )
 
     results = rpt.add_section("III. Results")
     results.add_table(
@@ -80,6 +82,7 @@ def build_report(asset_path: pathlib.Path) -> Report:
 
 
 def main() -> None:
+    """Build the IEEE sample report and write Markdown/PDF outputs."""
     asset = _ensure_asset()
     rpt = build_report(asset)
     out_dir = ROOT / "examples" / "out"

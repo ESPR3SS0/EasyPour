@@ -1137,7 +1137,7 @@ packages:
 - pypi: ./
   name: easypour
   version: 0.1.0
-  sha256: dbefd0268b9f561f21fa7c07ba3c820a5a083a78508ecd2d1dc7875f2e0beef1
+  sha256: a2147633e5c57b526fe3d5ff9a0d12ebe665ae5dfa00319e78e027901bfac46e
   requires_dist:
   - markdown-it-py>=3.0.0
   - reportlab>=4.4.4,<5
@@ -1153,7 +1153,7 @@ packages:
   - pre-commit>=3.7.0,<4 ; extra == 'dev'
   - hypothesis>=6.112.0,<7 ; extra == 'dev'
   - weasyprint>=66.0,<67 ; extra == 'weasy'
-  requires_python: '>=3.9'
+  requires_python: '>=3.10'
 - conda: https://conda.anaconda.org/conda-forge/noarch/editables-0.5-pyhd8ed1ab_1.conda
   sha256: 8d4f908e670be360617d418c328213bc46e7100154c3742db085148141712f60
   md5: 2cf824fe702d88e641eec9f9f653e170

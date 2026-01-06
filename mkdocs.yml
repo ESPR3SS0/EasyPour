@@ -29,7 +29,9 @@ nav:
   - Library API: library.md
   - Customization: customization.md
   - Rendering: rendering.md
-  - Examples: examples.md
+  - Examples:
+      - Overview: examples.md
+      - Example PDFs: examples-gallery.md
   - Troubleshooting: troubleshooting.md
   - Contributing: contributing.md
 

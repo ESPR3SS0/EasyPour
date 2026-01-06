@@ -11,7 +11,6 @@ from __future__ import annotations
 import argparse
 import pathlib
 import sys
-from typing import Optional
 
 from easypour import Report, Table
 
@@ -37,7 +36,10 @@ def _make_plot():
 
 
 def build_report() -> Report:
-    rpt = Report("Quarterly Snapshot", author="EasyPour Examples")
+    """Construct a sample report that mixes layouts and artifacts."""
+    rpt = Report("Quarterly Snapshot", author="EasyPour Examples").configure_pdf(
+        page_layouts=["single", ("two", 3), "single"]
+    )
     summary = rpt.add_section("Summary")
     summary.add_text(
         "This lightweight report demonstrates the EasyPour workflow.",
@@ -74,6 +76,21 @@ def build_report() -> Report:
         f"See {rpt.ref('tab:metrics')} for the full metric snapshot and {rpt.ref('fig:latency')} "
         "for the raw latency trend."
     )
+
+    appendix = rpt.add_section("Appendix")
+    appendix.add_layout_block(
+        "single",
+        Table.from_dicts(
+            [
+                {"Item": "Owner", "Value": "ML Team"},
+                {"Item": "Revision", "Value": "2025Q1"},
+                {"Item": "Pipeline", "Value": "exp://snapshot"},
+            ]
+        ),
+        keep_together=True,
+        page_break_after=False,
+    )
+    rpt.add_page_break()
     return rpt
 
 
@@ -114,8 +131,11 @@ def _preview_dash(report: Report) -> None:
 
 
 def main():
+    """Entry point for CLI/preview invocations."""
     parser = argparse.ArgumentParser(description="Simple EasyPour workflow example.")
-    parser.add_argument("--preview", choices=["streamlit", "dash"], help="Preview the report instead of exiting.")
+    parser.add_argument(
+        "--preview", choices=["streamlit", "dash"], help="Preview the report instead of exiting."
+    )
     args = parser.parse_args()
 
     rpt = build_report()

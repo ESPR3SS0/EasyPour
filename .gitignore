@@ -131,3 +131,4 @@ cython_debug/
 .manymark_figs/
 .easypour_math/
 .manymark_math/
+docs/examples/generated/
