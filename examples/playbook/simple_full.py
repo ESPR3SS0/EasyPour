@@ -46,7 +46,8 @@ def build_report() -> Report:
         "We capture a short narrative, a metrics table, and a simple figure.",
     )
 
-    rpt.add_section("Metrics").add_table(
+    metrics_section = rpt.add_section("Metrics")
+    metrics_section.add_table(
         Table.from_dicts(
             [
                 {"Metric": "Accuracy", "Value": "92.8%"},
@@ -59,6 +60,7 @@ def build_report() -> Report:
         numbered=True,
     )
 
+    added_fig = False
     plot = _make_plot()
     if plot is not None:
         rpt.add_section("Figure").add_matplotlib(
@@ -71,11 +73,15 @@ def build_report() -> Report:
             label="fig:latency",
             numbered=True,
         )
+        added_fig = True
 
-    rpt.add_section("Notes").add_text(
-        f"See {rpt.ref('tab:metrics')} for the full metric snapshot and {rpt.ref('fig:latency')} "
-        "for the raw latency trend."
-    )
+    note_text = f"See {rpt.ref('tab:metrics')} for the full metric snapshot"
+    if added_fig:
+        note_text += f" and {rpt.ref('fig:latency')} for the raw latency trend."
+    else:
+        note_text += ". (Latency figure unavailable in this environment.)"
+
+    rpt.add_section("Notes").add_text(note_text)
 
     appendix = rpt.add_section("Appendix")
     appendix.add_layout_block(

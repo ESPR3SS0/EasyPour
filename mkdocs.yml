@@ -32,6 +32,11 @@ nav:
   - Examples:
       - Overview: examples.md
       - Example PDFs: examples-gallery.md
+      - Raw Markdown:
+          - Simple: examples/generated/simple.md
+          - Complex: examples/generated/complex.md
+          - Simple Playbook: examples/generated/simple_full.md
+          - IEEE Sample: examples/generated/ieee_sample.md
   - Troubleshooting: troubleshooting.md
   - Contributing: contributing.md
 
