@@ -106,6 +106,7 @@ Tip: `--builder` and `--from-md` are mutually exclusive.
 - Math snippets: `Section.add_math(r"\int_0^1 ...", caption="Integral")` renders TeX-like formulas via matplotlib.
 - Figures/tables with numbering: `Section.add_figure(...)` / `Section.add_table(..., numbered=True)` auto-generate IEEE-style captions.
 - Citations: `Report.add_reference(...)` + `report.cite("smith19")` give you `[1]` references and an auto-built References section.
+- Math formulas: use `Section.add_math("F_1 = ...")` to embed TeX-style equations (inline `$...$` is not parsed).
 - Layout control: `PDFTemplate(layout="two", column_gap=24)` or even `template.register_layout("cover", builder)` let you define single/two/custom column frames and caption styles without touching ReportLab internals.
 - Global PDF tuning without templates: `report.configure_pdf(page_size=..., margins=..., font="Times-Roman", header_fn=...)` sets default page size, margins, fonts, column layouts, headers/footers, and caption styles. If you also pass a custom template, EasyPour will warn when your code-level choices override template values so you always know which settings win.
 - Interactive plots: `Section.add_matplotlib(fig, interactive=True)` keeps the PDF static while upgrading the Streamlit/Dash view to Plotly (zoom/pan/hover).

@@ -77,6 +77,37 @@ def build_report(asset_path: pathlib.Path) -> Report:
     )
     results.add_text(f"Metrics outperform the baseline reported in {rpt.cite('nguyen21')} by 7%.")
 
+    discussion = rpt.add_section("IV. Discussion")
+    discussion.add_text(
+        "Beyond raw metrics, we highlight qualitative feedback from reviewers:",
+        "- Deployment pipeline shaved 25% off end-to-end startup time.",
+        "- Model distillation maintained accuracy while shrinking memory usage.",
+        "- Edge nodes benefit from the lower latency tail without infrastructure changes.",
+    )
+    discussion.add_text(
+        "Future work includes deeper ablation studies, larger validation cohorts, and integrating "
+        "hardware counters to track perf regressions in near real-time."
+    )
+
+    rpt.add_page_break()
+    appendix = rpt.add_section("Appendix")
+    appendix.add_text(
+        "We include additional material beyond the main paper to illustrate how two-column layouts "
+        "handle long-form content. Each subsection can cover implementation details, hyperparameter grids, "
+        "or error analyses that would otherwise clutter the primary sections."
+    )
+
+    for idx in range(1, 4):
+        appendix.add_section(f"Appendix Section {idx}").add_text(
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
+            "Phasellus euismod, nisi a viverra lobortis, orci est gravida sapien, "
+            "nec dictum turpis neque in leo. Fusce sed ultricies nunc. "
+            "Aliquam erat volutpat. Pellentesque habitant morbi tristique senectus et netus.",
+            "Curabitur et commodo est. Etiam id urna venenatis, sodales urna id, posuere massa. "
+            "Maecenas suscipit, justo sed congue suscipit, arcu mi consequat mi, ac porta orci nisl vitae augue. "
+            "Sed facilisis metus ac enim cursus, quis aliquet ante vulputate.",
+        )
+
     rpt.ensure_references_section()
     return rpt
 

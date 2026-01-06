@@ -16,6 +16,12 @@ date: 2026-01-06
 - [I. Introduction](#i-introduction)
 - [II. Methodology](#ii-methodology)
 - [III. Results](#iii-results)
+- [IV. Discussion](#iv-discussion)
+- [](#section)
+- [Appendix](#appendix)
+  - [Appendix Section 1](#appendix-section-1)
+  - [Appendix Section 2](#appendix-section-2)
+  - [Appendix Section 3](#appendix-section-3)
 - [References](#references)
 
 ## Abstract
@@ -50,6 +56,50 @@ We generate Markdown first, then convert it to a structured PDF using EasyPour's
 *Table 1:* Evaluation metrics on the EdgeBench dataset.
 
 Metrics outperform the baseline reported in [2] by 7%.
+
+## IV. Discussion
+<a id='iv-discussion'></a>
+
+Beyond raw metrics, we highlight qualitative feedback from reviewers:
+
+- Deployment pipeline shaved 25% off end-to-end startup time.
+
+- Model distillation maintained accuracy while shrinking memory usage.
+
+- Edge nodes benefit from the lower latency tail without infrastructure changes.
+
+Future work includes deeper ablation studies, larger validation cohorts, and integrating hardware counters to track perf regressions in near real-time.
+
+## 
+<a id='section'></a>
+
+<div style='page-break-after: always;'></div>
+
+## Appendix
+<a id='appendix'></a>
+
+We include additional material beyond the main paper to illustrate how two-column layouts handle long-form content. Each subsection can cover implementation details, hyperparameter grids, or error analyses that would otherwise clutter the primary sections.
+
+### Appendix Section 1
+<a id='appendix-section-1'></a>
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus euismod, nisi a viverra lobortis, orci est gravida sapien, nec dictum turpis neque in leo. Fusce sed ultricies nunc. Aliquam erat volutpat. Pellentesque habitant morbi tristique senectus et netus.
+
+Curabitur et commodo est. Etiam id urna venenatis, sodales urna id, posuere massa. Maecenas suscipit, justo sed congue suscipit, arcu mi consequat mi, ac porta orci nisl vitae augue. Sed facilisis metus ac enim cursus, quis aliquet ante vulputate.
+
+### Appendix Section 2
+<a id='appendix-section-2'></a>
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus euismod, nisi a viverra lobortis, orci est gravida sapien, nec dictum turpis neque in leo. Fusce sed ultricies nunc. Aliquam erat volutpat. Pellentesque habitant morbi tristique senectus et netus.
+
+Curabitur et commodo est. Etiam id urna venenatis, sodales urna id, posuere massa. Maecenas suscipit, justo sed congue suscipit, arcu mi consequat mi, ac porta orci nisl vitae augue. Sed facilisis metus ac enim cursus, quis aliquet ante vulputate.
+
+### Appendix Section 3
+<a id='appendix-section-3'></a>
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus euismod, nisi a viverra lobortis, orci est gravida sapien, nec dictum turpis neque in leo. Fusce sed ultricies nunc. Aliquam erat volutpat. Pellentesque habitant morbi tristique senectus et netus.
+
+Curabitur et commodo est. Etiam id urna venenatis, sodales urna id, posuere massa. Maecenas suscipit, justo sed congue suscipit, arcu mi consequat mi, ac porta orci nisl vitae augue. Sed facilisis metus ac enim cursus, quis aliquet ante vulputate.
 
 ## References
 <a id='references'></a>

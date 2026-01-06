@@ -22,6 +22,8 @@ This example shows bullets, checkboxes, a code block, an image, and inline styli
 
 We measure F1[^f1] and link to <u>underlined</u> docs at [site](https://example.com).
 
+The formula below is rendered via `Section.add_math()` (inline dollar syntax is not supported).
+
 - Bullet one
 - Bullet two
 - Bullet three
@@ -38,7 +40,7 @@ def fib(n):
 
 ```
 
-$$F1 = 2 \cdot \frac{precision \cdot recall}{precision + recall}$$
+<figure>![F_1 = 2 \cdot \frac{precision \cdot recall}{precision + recall}](.easypour_math/math_645b6fff889b.png)<figcaption>F1 score</figcaption></figure>
 
 ## Artifacts
 <a id='artifacts'></a>
