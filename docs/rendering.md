@@ -51,4 +51,21 @@ rpt.add_section("Metrics").add_table(
 )
 tpl = PDFTemplate(layout="two", column_gap=24)
 rpt.write_pdf("out_obj.pdf", template=tpl)
+
+# Mix layouts: single-column cover, two-column body, single-column appendix
+tpl = PDFTemplate(
+    layout="two",
+    column_gap=24,
+    page_layouts=["single", ("two", 4), "single"],
+)
+sec = rpt.add_section("Appendix")
+sec.add_layout_block(
+    "single",
+    Table(headers=["Metric"], rows=[[1], [2]]),
+    keep_together=True,
+    page_break_after=True,
+)
+rpt.add_page_break()
+rpt.add_section("References").add_text("See prior art.")
+rpt.write_pdf("out_obj_mixed.pdf", template=tpl)
 ```

@@ -62,13 +62,14 @@ rpt.configure_pdf(
     column_gap=22,
     font="Times-Roman",
     heading_overrides={2: {"color": "#004080"}},
-    page_layouts=[("two", 3), "single"],  # cover in single column, body in two columns
+    page_layouts=["single", ("two", 3), "single"],  # cover -> body -> appendix
 )
 rpt.write_pdf("report_two_col.pdf")
 
 # Per-section layout blocks (keeps both tables/images on the same layout)
 sec = rpt.add_section("Appendix")
 sec.add_layout_block("single", Table(headers=["X"], rows=[[1], [2]]), keep_together=True)
+rpt.add_page_break()
 
 # Use the IEEE preset for two-column output (optional)
 from easypour.ieee import IEEETemplate
@@ -98,7 +99,7 @@ You can also use the CLI module.
 
 Tip: `--builder` and `--from-md` are mutually exclusive.
 
-## Little Things That Delight
+## Little Helpers
 - Inline helpers: `b("bold")`, `i("italic")`, `u("underline")`, `code("snippet")`, `link("text", "https://…")`.
 - Tables: `Table.from_dicts([{...}, {...}])` or explicit headers/rows.
 - Images: pass `caption` and/or `width` (like `"60%"` or `"380px"`) for a `<figure>` wrapper.
